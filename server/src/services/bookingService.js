@@ -4,6 +4,10 @@ import {
   getNightStrings,
 } from "../repositories/bookingRepository.js";
 import { listingRepository } from "../repositories/listingRepository.js";
+import {
+  serializeGuestBooking,
+  serializeHostBooking,
+} from "../serializers/bookingSerializer.js";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -16,52 +20,7 @@ function getTodayString() {
 }
 
 export function formatBooking(b) {
-  if (!b) return null;
-  const id = String(b._id || b.id);
-  const listing = b.listingId && typeof b.listingId === "object"
-    ? {
-        id: String(b.listingId._id || b.listingId.id),
-        title: b.listingId.title,
-        name: b.listingId.title,
-        city: b.listingId.city,
-        state: b.listingId.state,
-        location: b.listingId.location,
-        propertyType: b.listingId.propertyType,
-        pricePerNight: b.listingId.pricePerNight,
-        price: b.listingId.pricePerNight,
-        images: Array.isArray(b.listingId.images)
-          ? b.listingId.images.map((img) =>
-              typeof img === "string" ? img : img.url
-            )
-          : [],
-      }
-    : b.listingId ? String(b.listingId) : null;
-
-  const guest = b.guestId && typeof b.guestId === "object"
-    ? {
-        id: String(b.guestId._id || b.guestId.id),
-        name: b.guestId.name,
-        email: b.guestId.email,
-        avatar: b.guestId.avatar,
-      }
-    : b.guestId ? String(b.guestId) : null;
-
-  return {
-    id,
-    _id: id,
-    listingId: listing,
-    listing,
-    guestId: guest,
-    guest,
-    hostId: String(b.hostId),
-    checkIn: b.checkIn,
-    checkOut: b.checkOut,
-    totalNights: b.totalNights,
-    totalPrice: b.totalPrice,
-    status: b.status,
-    createdAt: b.createdAt,
-    updatedAt: b.updatedAt,
-  };
+  return serializeGuestBooking(b);
 }
 
 export function createBookingService(
@@ -162,12 +121,12 @@ export function createBookingService(
 
     async getMyBookings(guestId) {
       const bookings = await bookingRepo.findByGuest(guestId);
-      return bookings.map(formatBooking);
+      return bookings.map(serializeGuestBooking);
     },
 
     async getHostBookings(hostId) {
       const bookings = await bookingRepo.findByHost(hostId);
-      return bookings.map(formatBooking);
+      return bookings.map(serializeHostBooking);
     },
 
     async getBooking(id, userId) {
@@ -188,7 +147,10 @@ export function createBookingService(
         );
       }
 
-      return formatBooking(booking);
+      if (userIdStr === hostIdStr) {
+        return serializeHostBooking(booking);
+      }
+      return serializeGuestBooking(booking);
     },
 
     async cancelBooking(id, guestId) {

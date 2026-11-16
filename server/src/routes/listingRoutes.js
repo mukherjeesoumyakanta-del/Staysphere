@@ -6,6 +6,7 @@ import { authenticate, requireRole } from "../middleware/auth.js";
 import { uploadImages, processImages } from "../middleware/upload.js";
 import { validateListing } from "../middleware/validateListing.js";
 import { listingRepository } from "../repositories/listingRepository.js";
+import { publicCacheControl, privateNoCache } from "../middleware/caching.js";
 
 export function listingRoutes(config, { users, listings } = {}) {
   const router = Router();
@@ -14,11 +15,11 @@ export function listingRoutes(config, { users, listings } = {}) {
   const controller = createListingController(service);
   const authService = createAuthService(config, users);
 
-  // GET /api/listings - public
-  router.get("/listings", controller.list);
+  // GET /api/listings - public (cached with stale-while-revalidate)
+  router.get("/listings", publicCacheControl(), controller.list);
 
   // GET /api/listings/:id - public, increment viewCount if ACTIVE
-  router.get("/listings/:id", async (req, res, next) => {
+  router.get("/listings/:id", publicCacheControl(), async (req, res, next) => {
     try {
       const listing = await service.getOne(req.params.id);
       // Increment viewCount asynchronously if ACTIVE (don't await, best-effort)
@@ -40,6 +41,7 @@ export function listingRoutes(config, { users, listings } = {}) {
   // GET /api/host/listings - authenticated HOST
   router.get(
     "/host/listings",
+    privateNoCache(),
     authenticate(authService),
     requireRole("HOST"),
     controller.hostListings
@@ -48,6 +50,7 @@ export function listingRoutes(config, { users, listings } = {}) {
   // POST /api/listings - authenticated HOST
   router.post(
     "/listings",
+    privateNoCache(),
     authenticate(authService),
     requireRole("HOST"),
     uploadImages,
@@ -59,6 +62,7 @@ export function listingRoutes(config, { users, listings } = {}) {
   // PATCH /api/listings/:id - authenticated HOST
   router.patch(
     "/listings/:id",
+    privateNoCache(),
     authenticate(authService),
     requireRole("HOST"),
     uploadImages,
@@ -70,6 +74,7 @@ export function listingRoutes(config, { users, listings } = {}) {
   // DELETE /api/listings/:id - authenticated HOST
   router.delete(
     "/listings/:id",
+    privateNoCache(),
     authenticate(authService),
     requireRole("HOST"),
     controller.remove

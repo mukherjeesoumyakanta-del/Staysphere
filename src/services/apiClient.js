@@ -23,7 +23,7 @@ export async function apiRequest(
     response = await fetch(API_BASE_URL + path, {
       method,
       credentials: "include",
-      signal: signal || AbortSignal.timeout(15000),
+      signal: signal || AbortSignal.timeout(8000),
       headers: {
         Accept: "application/json",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),

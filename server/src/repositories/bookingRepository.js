@@ -91,23 +91,23 @@ export const bookingRepository = {
 
   async findByGuest(guestId) {
     return Booking.find({ guestId })
-      .populate("listingId")
+      .populate("listingId", "title city state location propertyType pricePerNight images")
       .sort({ createdAt: -1 })
       .lean();
   },
 
   async findByHost(hostId) {
     return Booking.find({ hostId })
-      .populate("listingId")
-      .populate("guestId", "name email avatar")
+      .populate("listingId", "title city state location propertyType pricePerNight images")
+      .populate("guestId", "name avatar")
       .sort({ createdAt: -1 })
       .lean();
   },
 
   async findById(id) {
     return Booking.findById(id)
-      .populate("listingId")
-      .populate("guestId", "name email avatar")
+      .populate("listingId", "title city state location propertyType pricePerNight images")
+      .populate("guestId", "name avatar")
       .lean();
   },
 

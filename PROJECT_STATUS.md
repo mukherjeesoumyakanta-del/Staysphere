@@ -37,16 +37,25 @@
 
 ## 2. Test Verification Summary
 
-- **Backend Integration Tests** (`server/`): **52 passed**, 0 failed
+- **Backend Integration & Security Tests** (`server/`): **61 passed**, 0 failed
   - Auth, registration, session, role guards, CSRF, rate-limiting
   - Property CRUD, host ownership enforcement, public filter queries
   - Atomic booking creation, overlap conflict (409), cancellation
   - Availability blocks, adjacent date boundaries
   - Gemini AI search extraction, anti-injection operator stripping, description grounding
+  - Privacy Serializers (`serializePublicListing`, `serializeSafeUser`) stripping host PII and password hashes
+  - Gemini Privacy Gateway tests verifying emails, phone numbers, and ObjectIDs never reach LLM prompts
+  - NoSQL injection prevention rejecting operator patterns in queries and payloads
+  - Stored XSS defense stripping HTML tags from user inputs
+  - High-resolution `Server-Timing` header and telemetry buffer at `GET /api/dev/performance`
+  - HTTP `Cache-Control` public caching with stale-while-revalidate and private no-store headers
 - **Frontend Unit Tests** (`src/services/`): **11 passed**, 0 failed
   - Auth client token restoration, CSRF headers, failure recovery
   - Filter combinations, favorite toggling, calendar interval rejection
-- **Production Build** (`npm run build`): **Succeeded in 9.8s**
+- **Total Automated Tests**: **72 passed**, 0 failed
+- **Continuous Integration**: `.github/workflows/ci.yml` automated validation on pushes & PRs to `main`
+- **Unified Dev Server**: `npm run dev` starts both Express API (5000) and Vite (5173) in one process
+- **Production Build** (`npm run build`): **Succeeded cleanly**
   - All 3,956 modules transformed cleanly
   - Code-split chunks: 3D VillaScene, Analytics, AvailabilityCalendar, Pages
 

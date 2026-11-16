@@ -1,5 +1,7 @@
 # StaySphere — AI-Powered Property Discovery & Management Platform
 
+[![StaySphere CI](https://github.com/mukherjeesoumyakanta-del/Staysphere/actions/workflows/ci.yml/badge.svg)](https://github.com/mukherjeesoumyakanta-del/Staysphere/actions/workflows/ci.yml)
+
 StaySphere is a production-quality, full-stack MERN application with Google Gemini integration, 3D architectural storytelling, and atomic booking availability. Designed as a luxury property discovery experience inspired by high-end architectural SaaS platforms.
 
 ---
@@ -104,7 +106,12 @@ AI_MODEL=gemini-1.5-flash
 AI_API_KEY=your-google-gemini-api-key
 ```
 
-### 3. Run Development Servers
+### 3. Run Development Server
+Start both the Express API server (port 5000) and the Vite frontend (port 5173) with a single command:
+```sh
+npm run dev
+```
+Or run individually in separate terminals:
 ```sh
 # Terminal 1: Backend Express API
 npm run dev:server
@@ -113,6 +120,21 @@ npm run dev:server
 npm run dev:client
 ```
 Visit `http://localhost:5173` in your browser.
+
+---
+
+## Continuous Integration (GitHub Actions)
+
+StaySphere includes a streamlined GitHub Actions workflow (`.github/workflows/ci.yml`) triggered on every push and pull request to `main`:
+
+1. **Environment Setup**: Provisions Node.js 22 LTS with dual lockfile caching (`package-lock.json` and `server/package-lock.json`).
+2. **Clean Installs**: Executes `npm ci` for root and `npm --prefix server ci` for backend dependencies.
+3. **Automated Testing**:
+   - Executes 11 frontend unit tests (`npm run test:client`).
+   - Executes 61 backend integration, privacy gateway, security, and latency tests (`npm run test:server`).
+   - All tests run hermetically with mocked LLM clients — zero production secrets required in CI.
+4. **Build Verification**: Runs `npm run build` to guarantee clean Vite bundling.
+5. **Security Guard**: Enforces `permissions: contents: read` (least-privilege). Any failing test halts execution and blocks pull request merges.
 
 ---
 

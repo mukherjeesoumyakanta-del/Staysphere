@@ -42,75 +42,83 @@ export function createAiClient({
         );
       }
 
-      const signal = AbortSignal.timeout(15000);
+      const signal = AbortSignal.timeout(12000);
 
-      if (normProvider === "gemini") {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-          cleanModel
-        )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      try {
+        if (normProvider === "gemini") {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+            cleanModel
+          )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature,
-              maxOutputTokens: maxTokens,
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature,
+                maxOutputTokens: maxTokens,
+              },
+            }),
+            signal,
+          });
+
+          if (!response.ok) {
+            let errBody = await response.text().catch(() => "");
+            if (apiKey) errBody = errBody.replaceAll(apiKey, "[REDACTED_KEY]");
+            throw new Error(
+              `Gemini API request failed (${response.status}): ${errBody || response.statusText}`
+            );
+          }
+
+          const data = await response.json();
+          const text =
+            data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          return { text: text.trim(), provider: "gemini", model: cleanModel };
+        }
+
+        if (normProvider === "openai" || normProvider === "groq") {
+          const endpoint =
+            normProvider === "groq"
+              ? "https://api.groq.com/openai/v1/chat/completions"
+              : "https://api.openai.com/v1/chat/completions";
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
             },
-          }),
-          signal,
-        });
+            body: JSON.stringify({
+              model: cleanModel,
+              messages: [{ role: "user", content: prompt }],
+              temperature,
+              max_tokens: maxTokens,
+            }),
+            signal,
+          });
 
-        if (!response.ok) {
-          const errBody = await response.text().catch(() => "");
-          throw new Error(
-            `Gemini API request failed (${response.status}): ${errBody || response.statusText}`
-          );
+          if (!response.ok) {
+            let errBody = await response.text().catch(() => "");
+            if (apiKey) errBody = errBody.replaceAll(apiKey, "[REDACTED_KEY]");
+            throw new Error(
+              `OpenAI API request failed (${response.status}): ${errBody || response.statusText}`
+            );
+          }
+
+          const data = await response.json();
+          const text = data?.choices?.[0]?.message?.content || "";
+          return { text: text.trim(), provider: normProvider, model: cleanModel };
         }
 
-        const data = await response.json();
-        const text =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        return { text: text.trim(), provider: "gemini", model: cleanModel };
+        throw new Error(
+          `Unsupported AI_PROVIDER: "${normProvider}". Supported providers: "gemini", "openai", "groq".`
+        );
+      } catch (err) {
+        let msg = err.message || "AI service request failed";
+        if (apiKey) msg = msg.replaceAll(apiKey, "[REDACTED_KEY]");
+        throw new Error(msg);
       }
-
-      if (normProvider === "openai" || normProvider === "groq") {
-        const endpoint =
-          normProvider === "groq"
-            ? "https://api.groq.com/openai/v1/chat/completions"
-            : "https://api.openai.com/v1/chat/completions";
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: cleanModel,
-            messages: [{ role: "user", content: prompt }],
-            temperature,
-            max_tokens: maxTokens,
-          }),
-          signal,
-        });
-
-        if (!response.ok) {
-          const errBody = await response.text().catch(() => "");
-          throw new Error(
-            `OpenAI API request failed (${response.status}): ${errBody || response.statusText}`
-          );
-        }
-
-        const data = await response.json();
-        const text = data?.choices?.[0]?.message?.content || "";
-        return { text: text.trim(), provider: normProvider, model: cleanModel };
-      }
-
-      throw new Error(
-        `Unsupported AI_PROVIDER: "${normProvider}". Supported providers: "gemini", "openai", "groq".`
-      );
     },
   };
 }

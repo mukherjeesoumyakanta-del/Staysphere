@@ -16,6 +16,9 @@ import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
 import { getConfig } from "./config/env.js";
 import { uploadsDir } from "./config/cloudinary.js";
+import { timingMiddleware, getPerformanceStats } from "./middleware/timing.js";
+import { sanitizeInputMiddleware } from "./middleware/sanitizeInput.js";
+import { privateNoCache } from "./middleware/caching.js";
 
 export function createApp(
   config = getConfig(),
@@ -24,6 +27,10 @@ export function createApp(
   const app = express();
   app.locals.config = config;
   app.disable("x-powered-by");
+
+  // High-resolution performance timing and Server-Timing header
+  app.use(timingMiddleware());
+
   // Render terminates TLS at its reverse proxy. Trust exactly one proxy hop.
   if (config.nodeEnv === "production") app.set("trust proxy", 1);
   app.use(
@@ -53,7 +60,7 @@ export function createApp(
       limit: config.nodeEnv === "development" ? 10000 : 100,
       standardHeaders: "draft-8",
       legacyHeaders: false,
-      skip: (req) => req.path === "/api/health",
+      skip: (req) => req.path === "/api/health" || req.path === "/api/dev/performance",
       message: {
         error: {
           code: "RATE_LIMITED",
@@ -64,8 +71,17 @@ export function createApp(
   );
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
+
+  // Input sanitization: strips NoSQL operators & Stored XSS tags
+  app.use(sanitizeInputMiddleware());
+
+  // Performance stats endpoint for telemetry & viva demonstration
+  app.get("/api/dev/performance", (req, res) => {
+    res.json({ data: getPerformanceStats() });
+  });
+
   app.use("/uploads", express.static(uploadsDir));
-  app.use("/api/auth", authRoutes(config, users));
+  app.use("/api/auth", privateNoCache(), authRoutes(config, users));
   app.use("/api", listingRoutes(config, { users, listings }));
   app.use(
     "/api",
@@ -78,6 +94,7 @@ export function createApp(
   );
   app.use(
     "/api",
+    privateNoCache(),
     favoriteRoutes(config, {
       users,
       favoriteRepo,
@@ -86,6 +103,7 @@ export function createApp(
   );
   app.use(
     "/api",
+    privateNoCache(),
     bookingRoutes(config, {
       users,
       listings,
@@ -94,6 +112,7 @@ export function createApp(
   );
   app.use(
     "/api",
+    privateNoCache(),
     aiRoutes(config, {
       users,
       listings,

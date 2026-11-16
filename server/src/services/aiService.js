@@ -1,6 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { createAiClient } from "./aiProvider.js";
 import { listingRepository } from "../repositories/listingRepository.js";
+import { aiPrivacyService } from "./aiPrivacyService.js";
 
 const VALID_PROPERTY_TYPES = [
   "Apartment",
@@ -31,168 +32,8 @@ const VALID_AMENITIES = [
   "Mountain view",
 ];
 
-/**
- * Fallback heuristic extractor when no LLM API key is configured
- * or when the LLM response is unparseable.
- */
-function fallbackExtractFilters(prompt) {
-  const s = prompt.toLowerCase();
-  const filters = {};
-  const amenitiesList = [];
-
-  // Locations / destinations
-  const knownCities = [
-    "Goa",
-    "Manali",
-    "Jaipur",
-    "Lonavala",
-    "Darjeeling",
-    "Bengaluru",
-    "Mumbai",
-    "Delhi",
-    "Kerala",
-    "Shimla",
-    "Udaipur",
-  ];
-  for (const c of knownCities) {
-    if (s.includes(c.toLowerCase())) {
-      filters.city = c;
-      break;
-    }
-  }
-
-  // Property type
-  for (const t of VALID_PROPERTY_TYPES) {
-    if (s.includes(t.toLowerCase())) {
-      filters.propertyType = t;
-      break;
-    }
-  }
-
-  // Max budget
-  const maxMatch = s.match(
-    /(?:under|below|budget|max|less than|up to)\s*(?:₹|rs\.?\s*)?([\d,]+)/i
-  );
-  if (maxMatch) {
-    const val = parseInt(maxMatch[1].replace(/,/g, ""), 10);
-    if (!isNaN(val) && val > 0) filters.maxPrice = val;
-  }
-
-  // Min budget
-  const minMatch = s.match(/(?:above|over|more than|at least)\s*(?:₹|rs\.?\s*)?([\d,]+)/i);
-  if (minMatch) {
-    const val = parseInt(minMatch[1].replace(/,/g, ""), 10);
-    if (!isNaN(val) && val >= 0) filters.minPrice = val;
-  }
-
-  // Guests
-  const guestMatch = s.match(/(?:for\s+)?(\d+)\s*(?:guests?|people|persons?)/i);
-  if (guestMatch) {
-    const val = parseInt(guestMatch[1], 10);
-    if (!isNaN(val) && val > 0) filters.guests = val;
-  }
-
-  // Bedrooms
-  const bedMatch = s.match(/(\d+)\s*(?:bed(?:rooms?)?|bhk)/i);
-  if (bedMatch) {
-    const val = parseInt(bedMatch[1], 10);
-    if (!isNaN(val) && val >= 0) filters.bedrooms = val;
-  }
-
-  // Amenities
-  for (const a of VALID_AMENITIES) {
-    const al = a.toLowerCase();
-    if (
-      s.includes(al) ||
-      (a === "WiFi" && /wifi|wi-fi|internet/.test(s)) ||
-      (a === "Swimming pool" && s.includes("pool")) ||
-      (a === "Air conditioning" && /\bac\b|air condition/.test(s))
-    ) {
-      if (!amenitiesList.includes(a)) amenitiesList.push(a);
-    }
-  }
-  if (amenitiesList.length > 0) {
-    filters.amenities = amenitiesList;
-  }
-
-  return filters;
-}
-
-/**
- * Validate LLM extracted filter object against a strict schema.
- * Only allowed keys: city, maxPrice, minPrice, guests, bedrooms, propertyType, amenities.
- * Strips any disallowed keys or potential MongoDB operator injections.
- */
 export function validateAiFilters(raw) {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return {};
-  }
-
-  const validated = {};
-
-  // city: string only, sanitize letters, spaces, hyphens
-  if (typeof raw.city === "string" && raw.city.trim().length > 0) {
-    const cleanCity = raw.city.trim().replace(/[^\w\s-]/gi, "").slice(0, 50);
-    if (cleanCity.length > 0) validated.city = cleanCity;
-  }
-
-  // maxPrice: positive number
-  if (raw.maxPrice !== undefined && raw.maxPrice !== null) {
-    const num = Number(raw.maxPrice);
-    if (Number.isFinite(num) && num > 0) {
-      validated.maxPrice = Math.round(num);
-    }
-  }
-
-  // minPrice: non-negative number
-  if (raw.minPrice !== undefined && raw.minPrice !== null) {
-    const num = Number(raw.minPrice);
-    if (Number.isFinite(num) && num >= 0) {
-      validated.minPrice = Math.round(num);
-    }
-  }
-
-  // guests: positive integer
-  if (raw.guests !== undefined && raw.guests !== null) {
-    const num = parseInt(raw.guests, 10);
-    if (!isNaN(num) && num >= 1 && num <= 50) {
-      validated.guests = num;
-    }
-  }
-
-  // bedrooms: non-negative integer
-  if (raw.bedrooms !== undefined && raw.bedrooms !== null) {
-    const num = parseInt(raw.bedrooms, 10);
-    if (!isNaN(num) && num >= 0 && num <= 20) {
-      validated.bedrooms = num;
-    }
-  }
-
-  // propertyType: whitelist check
-  if (typeof raw.propertyType === "string" && raw.propertyType.trim().length > 0) {
-    const match = VALID_PROPERTY_TYPES.find(
-      (t) => t.toLowerCase() === raw.propertyType.trim().toLowerCase()
-    );
-    if (match) validated.propertyType = match;
-  }
-
-  // amenities: array of valid amenities
-  if (Array.isArray(raw.amenities)) {
-    const cleaned = [];
-    for (const item of raw.amenities) {
-      if (typeof item === "string") {
-        const match = VALID_AMENITIES.find(
-          (a) => a.toLowerCase() === item.trim().toLowerCase()
-        );
-        if (match && !cleaned.includes(match)) {
-          cleaned.push(match);
-        }
-      }
-    }
-    if (cleaned.length > 0) validated.amenities = cleaned;
-  }
-
-  return validated;
+  return aiPrivacyService.validateAiFilters(raw);
 }
 
 export function createAiService(
@@ -202,7 +43,8 @@ export function createAiService(
   return {
     /**
      * Search listings using natural language prompt.
-     * Extracts structured filters and queries real ACTIVE listings from MongoDB.
+     * Sanitizes prompt through aiPrivacyService, extracts structured filters,
+     * queries real ACTIVE listings from MongoDB, and tracks latency splits.
      */
     async searchListings(prompt) {
       if (typeof prompt !== "string" || prompt.trim().length === 0) {
@@ -216,11 +58,25 @@ export function createAiService(
         );
       }
 
-      const cleanPrompt = prompt.trim();
+      // 1. Sanitize prompt & scrub PII / credentials via privacy gateway
+      let cleanPrompt;
+      try {
+        cleanPrompt = aiPrivacyService.sanitizeSearchPrompt(prompt);
+      } catch (err) {
+        throw new ApiError(400, "INVALID_PROMPT", err.message);
+      }
+
+      const totalStart = performance.now();
+      let llmDurationMs = 0;
+      let dbDurationMs = 0;
       let extracted = {};
       let usedProvider = "fallback";
 
+      // 2. Extract deterministic filters locally first (< 1ms)
+      const localFilters = aiPrivacyService.extractDeterministicFilters(cleanPrompt);
+
       if (aiClient && aiClient.isConfigured()) {
+        const llmStart = performance.now();
         try {
           const systemInstructions = `You are a search query parser for StaySphere rental properties.
 Extract search filters from this user request: "${cleanPrompt}".
@@ -240,34 +96,42 @@ Return raw JSON only, no markdown, no quotes around json, no preamble.`;
             maxTokens: 300,
           });
 
+          llmDurationMs = Math.round(performance.now() - llmStart);
+
           // Clean markdown backticks if returned
           let text = result.text.trim();
           text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
           const parsed = JSON.parse(text);
-          extracted = validateAiFilters(parsed);
+          const validated = aiPrivacyService.validateAiFilters(parsed);
+          // Merge local deterministic filters with LLM extracted filters
+          extracted = { ...localFilters, ...validated };
           usedProvider = result.provider || "llm";
         } catch (err) {
-          console.warn("LLM search extraction failed, falling back to heuristic:", err.message);
-          extracted = fallbackExtractFilters(cleanPrompt);
-          usedProvider = "fallback";
+          llmDurationMs = Math.round(performance.now() - llmStart);
+          extracted = localFilters;
+          usedProvider = "deterministic_fallback";
         }
       } else {
-        extracted = fallbackExtractFilters(cleanPrompt);
+        extracted = localFilters;
       }
 
-      // Query real ACTIVE MongoDB listings with safe mapped filters
+      // 3. Query real ACTIVE MongoDB listings with safe mapped filters
       const queryParams = {
         city: extracted.city,
         maxPrice: extracted.maxPrice,
         minPrice: extracted.minPrice,
-        maxGuests: extracted.guests,
+        maxGuests: extracted.maxGuests || extracted.guests,
         bedrooms: extracted.bedrooms,
         propertyType: extracted.propertyType,
         amenities: extracted.amenities,
         limit: 20,
       };
 
+      const dbStart = performance.now();
       const searchResult = await listingRepo.search(queryParams);
+      dbDurationMs = Math.round(performance.now() - dbStart);
+      const totalDurationMs = Math.round(performance.now() - totalStart);
+
       const listings = searchResult?.listings || [];
 
       let explanation = "";
@@ -293,29 +157,41 @@ Return raw JSON only, no markdown, no quotes around json, no preamble.`;
         explanation,
         provider: usedProvider,
         configured: Boolean(aiClient && aiClient.isConfigured()),
+        timings: {
+          llmDurationMs,
+          dbDurationMs,
+          totalDurationMs,
+        },
       };
     },
 
     /**
      * Generate an engaging, strictly grounded property description for hosts.
-     * Never invents amenities or facts not provided by the host.
+     * Sanitizes facts through aiPrivacyService so private addresses or PII
+     * never reach external LLM endpoints.
      */
     async generateListingDescription(facts) {
       if (!facts || typeof facts !== "object") {
         throw new ApiError(400, "INVALID_FACTS", "Property facts must be provided.");
       }
 
-      const title = String(facts.title || facts.name || "").trim();
-      const location = String(facts.location || [facts.city, facts.state].filter(Boolean).join(", ") || "").trim();
-      const propertyType = String(facts.propertyType || facts.type || "property").trim();
-      const bedrooms = Number(facts.bedrooms ?? 1);
-      const bathrooms = Number(facts.bathrooms ?? 1);
-      const maxGuests = Number(facts.maxGuests || facts.guests || 2);
+      const cleanFacts = aiPrivacyService.sanitizeDescriptionFacts(facts);
+
+      const title = String(cleanFacts.title || facts.title || facts.name || "").trim();
+      const city = cleanFacts.city || facts.city || "";
+      const state = cleanFacts.state || facts.state || "";
+      const location = [city, state].filter(Boolean).join(", ") || String(facts.location || "").trim();
+      const propertyType = String(cleanFacts.propertyType || facts.propertyType || facts.type || "Villa").trim();
+      const bedrooms = Number(cleanFacts.bedrooms ?? facts.bedrooms ?? 1);
+      const bathrooms = Number(cleanFacts.bathrooms ?? facts.bathrooms ?? 1);
+      const maxGuests = Number(cleanFacts.maxGuests || facts.maxGuests || facts.guests || 2);
       const pricePerNight = Number(facts.pricePerNight || facts.price || 0);
-      const amenities = Array.isArray(facts.amenities)
-        ? facts.amenities.filter((a) => typeof a === "string" && a.trim().length > 0)
+      const amenities = Array.isArray(cleanFacts.amenities)
+        ? cleanFacts.amenities
+        : Array.isArray(facts.amenities)
+        ? facts.amenities
         : [];
-      const highlights = String(facts.highlights || "").trim();
+      const highlights = String(cleanFacts.highlights || "").trim();
 
       if (!title || title.length < 3) {
         throw new ApiError(400, "TITLE_REQUIRED", "Property title must be at least 3 characters.");

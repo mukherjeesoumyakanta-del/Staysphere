@@ -1,0 +1,53 @@
+name: StaySphere CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Test and Build Validation
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      CI: true
+      PORT: 5000
+      CLIENT_URL: http://localhost:5173
+      MONGO_URI: mongodb://127.0.0.1:27017/staysphere-ci
+      JWT_SECRET: ci-dummy-secret-at-least-32-chars-long-for-tests!
+      AI_PROVIDER: gemini
+      AI_API_KEY: mock-ci-key
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm --prefix server ci
+
+      - name: Run client unit tests
+        run: npm run test:client
+
+      - name: Run backend & security/privacy tests
+        run: npm run test:server
+
+      - name: Verify frontend production build
+        run: npm run build

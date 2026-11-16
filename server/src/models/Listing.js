@@ -136,4 +136,14 @@ const listingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Performance & Scalability Indexes
+// 1. hostId: Speeds up host dashboard property lookups (IXSCAN instead of COLLSCAN)
+listingSchema.index({ hostId: 1 });
+// 2. status + createdAt: Speeds up public discovery queries and default sort
+listingSchema.index({ status: 1, createdAt: -1 });
+// 3. status + city: Speeds up location-filtered searches
+listingSchema.index({ status: 1, city: 1 });
+// 4. status + pricePerNight: Speeds up price range filtering and price sorting
+listingSchema.index({ status: 1, pricePerNight: 1 });
+
 export const Listing = mongoose.model("Listing", listingSchema);

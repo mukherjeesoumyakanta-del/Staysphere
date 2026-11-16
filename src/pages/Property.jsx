@@ -96,7 +96,8 @@ export default function Property() {
     dIn && dOut && dOut > dIn
       ? Math.round((dOut - dIn) / (1000 * 60 * 60 * 24))
       : 0;
-  const totalPrice = p && nights > 0 ? nights * p.price : 0;
+  const price = p ? Number(p.price ?? p.pricePerNight ?? 0) : 0;
+  const totalPrice = p && nights > 0 ? nights * price : 0;
 
   const hasOverlap = Boolean(
     checkIn &&
@@ -258,7 +259,7 @@ export default function Property() {
       <div className="detail-title">
         <div>
           <span className="eyebrow">
-            {p.type.toUpperCase()} · A STAYSPHERE SPACE
+            {(p.type || p.propertyType || "Stay").toUpperCase()} · A STAYSPHERE SPACE
           </span>
           <h1>{p.name}</h1>
           <p>
@@ -286,26 +287,28 @@ export default function Property() {
       </div>
       <div className="gallery">
         {(p.images && p.images.length > 0
-          ? p.images
+          ? p.images.map((img) => (typeof img === "string" ? img : img?.url || ""))
           : [
               "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=85",
             ]
-        ).map((img, i) => (
-          <button
-            key={img + i}
-            onClick={() => setGallery(i)}
-            aria-label={"Enlarge property image " + (i + 1)}
-          >
-            <img
-              src={img}
-              alt={p.name + " — view " + (i + 1)}
-              style={
-                i === 0 ? { viewTransitionName: "property-" + p.id } : undefined
-              }
-            />
-            {i === 2 && <span>View all photos</span>}
-          </button>
-        ))}
+        )
+          .filter(Boolean)
+          .map((img, i) => (
+            <button
+              key={img + i}
+              onClick={() => setGallery(i)}
+              aria-label={"Enlarge property image " + (i + 1)}
+            >
+              <img
+                src={img}
+                alt={(p.name || p.title || "Stay") + " — view " + (i + 1)}
+                style={
+                  i === 0 ? { viewTransitionName: "property-" + p.id } : undefined
+                }
+              />
+              {i === 2 && <span>View all photos</span>}
+            </button>
+          ))}
       </div>
       <div className="detail-layout">
         <div>

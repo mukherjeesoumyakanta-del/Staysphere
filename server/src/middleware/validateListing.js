@@ -1,3 +1,5 @@
+import { sanitizeObjectStrings } from "./sanitizeInput.js";
+
 const VALID_PROPERTY_TYPES = [
   "Apartment",
   "Villa",
@@ -196,6 +198,9 @@ function validateFields(body, isCreate) {
 export function validateListing(action) {
   const isCreate = action === "create";
   return (req, res, next) => {
+    if (req.body && typeof req.body === "object") {
+      sanitizeObjectStrings(req.body);
+    }
     const { fields, validated } = validateFields(req.body || {}, isCreate);
 
     if (Object.keys(fields).length > 0) {
