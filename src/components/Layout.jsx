@@ -45,8 +45,8 @@ export function Navbar() {
         </nav>
         <div className="nav-actions">
           {user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <span className="tiny-tag" style={{ textTransform: "capitalize", padding: "3px 8px" }}>
+            <div className="nav-user-actions" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span className="tiny-tag nav-user-tag" style={{ textTransform: "capitalize", padding: "3px 8px" }}>
                 {user.role?.toLowerCase()} · {user.name?.split(" ")[0] || "User"}
               </span>
               <Button
@@ -56,9 +56,9 @@ export function Navbar() {
                 Workspace
               </Button>
               <button
-                className="button secondary"
+                className="button secondary nav-logout-btn"
                 style={{
-                  padding: "0.45rem 0.85rem",
+                  padding: "0.45rem 0.75rem",
                   fontSize: "0.85rem",
                   display: "inline-flex",
                   alignItems: "center",
@@ -73,7 +73,7 @@ export function Navbar() {
                   }
                 }}
               >
-                <LogOut size={14} /> Sign out
+                <LogOut size={14} /> <span className="logout-text">Sign out</span>
               </button>
             </div>
           ) : (

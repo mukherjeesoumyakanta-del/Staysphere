@@ -12,9 +12,23 @@ services:
         value: 22.16.0
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 5000
       - key: CLIENT_URL
         sync: false
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: gemini-1.5-flash
+      - key: AI_PROVIDER
+        value: gemini
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false

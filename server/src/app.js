@@ -26,7 +26,11 @@ export function createApp(
   app.disable("x-powered-by");
   // Render terminates TLS at its reverse proxy. Trust exactly one proxy hop.
   if (config.nodeEnv === "production") app.set("trust proxy", 1);
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
   app.use(
     cors({
       credentials: true,

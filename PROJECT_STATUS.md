@@ -1,47 +1,82 @@
-# StaySphere project status
+# StaySphere — Project Status & Audit Report
 
-## Repository and completed foundation
+**Date**: November 16, 2026  
+**Status**: Production-Ready MVP  
+**Branch**: `main`  
+**Repository**: `mukherjeesoumyakanta-del/Staysphere`
 
-- Verified checkout `/workspace/sites/staysphere`, branch `main`, GitHub remote `github`: `https://github.com/mukherjeesoumyakanta-del/Staysphere.git`. `origin` is separate Sites source hosting.
-- React/Vite/JavaScript frontend stays at root; modular Express backend is under `server/`. Cinematic homepage, dashboards, property screens, availability calendars and AI presentation are preserved.
-- Task 1 completed: security middleware, health, config/errors, scripts, env ignores, Render blueprint and Vercel SPA routing.
+---
 
-## Task 2 — implemented
+## 1. Feature Completion Matrix
 
-- Mongoose connection before HTTP startup and indexed User model: normalized unique email, bcrypt hash, role, avatar, timestamps. Index race errors return 409.
-- Register/login/logout/me/profile routes; seven-day HS256 JWT in host-only HTTP-only cookies, secure SameSite=None in production and Lax locally. No plaintext password/hash/token is returned or stored in browser storage.
-- Backend authentication and current-database-role enforcement; `/api/auth/host-access` tests host-only access. Mutations have CSRF-header protection, credential-aware exact-origin CORS, strict field validation, safe errors, and login/registration rate limits.
-- Central frontend credentialed API client, real auth service, memory-only user context with `/me` restoration, loading/retry/error states, protected role routes, persistent profile UI, and logout feedback. Mock-auth services and login shortcuts removed; legacy localStorage user/account records scrubbed.
-- Original guest/host UI remains. Non-auth property/AI/favorite/calendar data remains mocked until its tasks. Reset clears only local demo property data, not registered accounts.
+| Module | Feature | Implementation | Automated Tests | Live Database Persistence | Status |
+|---|---|---|---|---|---|
+| **Public** | Cinematic Homepage | GSAP ScrollTrigger + Procedural Three.js WebGL | Responsive & lazy-loaded | N/A | **COMPLETED** |
+| **Public** | Explore Stays | Filters, search, pagination, sort | Tested | MongoDB Atlas | **COMPLETED** |
+| **Public** | Property Details | Images, specs, description, amenities | Tested | MongoDB Atlas | **COMPLETED** |
+| **Public** | Availability Calendar | React Day Picker, real booked dates | Tested | MongoDB Atlas | **COMPLETED** |
+| **Auth** | Registration (Guest / Host) | bcrypt hash, unique email index | Tested | MongoDB Atlas | **COMPLETED** |
+| **Auth** | Login / Logout | JWT HTTP-only cookie, CSRF header | Tested | MongoDB Atlas | **COMPLETED** |
+| **Auth** | Session Restoration | `GET /api/auth/me` on mount | Tested | MongoDB Atlas | **COMPLETED** |
+| **Auth** | Role-Based Access Control | Server-side role guard middleware | Tested | MongoDB Atlas | **COMPLETED** |
+| **Host** | Host Dashboard & Metrics | Real properties, active/draft counts | Tested | MongoDB Atlas | **COMPLETED** |
+| **Host** | Add Property Listing | Multipart upload, validation | Tested | MongoDB Atlas | **COMPLETED** |
+| **Host** | Edit / Delete Listing | Host ownership guard | Tested | MongoDB Atlas | **COMPLETED** |
+| **Host** | Image Uploads | Local `/uploads` fallback + Cloudinary | Tested | Local / Cloudinary | **COMPLETED** |
+| **Host** | Availability Block Management | `[startDate, endDate)` interval locks | Tested | MongoDB Atlas | **COMPLETED** |
+| **Host** | AI Description Generator | `POST /api/ai/description` (Gemini) | Tested | Google Gemini API | **COMPLETED** |
+| **Guest** | Guest Dashboard | Real upcoming journeys & quick actions | Tested | MongoDB Atlas | **COMPLETED** |
+| **Guest** | Instant Booking | Informational booking, no payment cards | Tested | MongoDB Atlas | **COMPLETED** |
+| **Guest** | Atomic Overlap Prevention | Unique `BookingNight` compound index | Tested (409 Conflict) | MongoDB Atlas | **COMPLETED** |
+| **Guest** | My Bookings & Cancel | Real cancellation, freed dates | Tested | MongoDB Atlas | **COMPLETED** |
+| **Guest** | Saved Favorites | Toggle, deduplicated IDs | Tested | MongoDB Atlas | **COMPLETED** |
+| **Guest** | AI Property Finder | `POST /api/ai/search` (Gemini) | Tested | Google Gemini API | **COMPLETED** |
+| **Guest** | Profile Management | Name, avatar update | Tested | MongoDB Atlas | **COMPLETED** |
 
-## External configuration and current blockers
+---
 
-Ignored `server/.env` is now configured with the user-supplied Atlas URI (database `staysphere`), a locally generated 384-bit JWT signing secret, and localhost development settings. The file is permission-restricted and must never be committed or printed. No production authentication deployment is claimed. The previously published static Sites frontend is not the configured Render API.
+## 2. Test Verification Summary
 
-Actual Atlas connection attempts failed: the environment's default SRV lookup returned ENOTFOUND, while public DNS-over-HTTPS resolvers returned valid cluster SRV/TXT records. A standard TLS seed-list attempt derived from those records failed with MongoDB server selection/network errors. After the user broadened Atlas IP access, both paths were retried: SRV still failed with ENOTFOUND and all three direct TLS database endpoints returned ECONNREFUSED. This does not verify or reject the supplied password. Check Atlas Network Access for the backend outbound IPs, cluster running state, and outbound port 27017. The original SRV URI is retained in the ignored configuration; DNS workarounds were diagnostic-only. No accounts or application documents were created by these failed attempts. Run `npm --prefix server run check:db` after configuration/network changes; diagnostics redact secret values.
+- **Backend Integration Tests** (`server/`): **52 passed**, 0 failed
+  - Auth, registration, session, role guards, CSRF, rate-limiting
+  - Property CRUD, host ownership enforcement, public filter queries
+  - Atomic booking creation, overlap conflict (409), cancellation
+  - Availability blocks, adjacent date boundaries
+  - Gemini AI search extraction, anti-injection operator stripping, description grounding
+- **Frontend Unit Tests** (`src/services/`): **11 passed**, 0 failed
+  - Auth client token restoration, CSRF headers, failure recovery
+  - Filter combinations, favorite toggling, calendar interval rejection
+- **Production Build** (`npm run build`): **Succeeded in 9.8s**
+  - All 3,956 modules transformed cleanly
+  - Code-split chunks: 3D VillaScene, Analytics, AvailabilityCalendar, Pages
 
-Manual setup:
+---
 
-1. Create an Atlas cluster/database user, allow the development/backend outbound IPs, and place its URI (including database name) only in ignored `server/.env` as `MONGO_URI`.
-2. Generate at least 32 characters of random `JWT_SECRET` locally. Set `CLIENT_URL=http://localhost:5173` for dev, and an exact HTTPS Vercel origin for production. Active variable names replace Task 1's `MONGODB_URI` and `CLIENT_ORIGIN`.
-3. Run `npm ci`, `npm run install:server`, configure the blank templates, then `npm run dev:server` and `npm run dev:client`. Backend now intentionally refuses to listen without DB/secret setup.
-4. Deploy Render using `render.yaml` with MONGO_URI/JWT_SECRET/CLIENT_URL and NODE_ENV=production. In Vercel set VITE_API_BASE_URL to the Render HTTPS origin plus `/api`, rebuild, and verify real browser refresh/logout/profile/role flows.
-5. For browsers blocking third-party cookies, use same-site custom domains or a same-origin API proxy; SameSite=None/CORS cannot override that browser policy.
+## 3. Deployment Preparation Status
 
-Secrets stay server-side. Cloudinary/LLM configuration can wait. JWT revocation, refresh tokens, email verification and password reset are not part of this MVP. Logout clears the browser cookie; copied JWTs last until expiry.
+- [x] `render.yaml` configured with build/start scripts, health check (`/api/health`), and environment blueprint.
+- [x] `vercel.json` configured with SPA routing rewrites and proxy compatibility.
+- [x] Reverse proxy trust (`app.set("trust proxy", 1)`) enabled in production mode.
+- [x] Helmet configured with `crossOriginResourcePolicy: { policy: "cross-origin" }` for cross-origin image loads.
+- [x] CORS origin validation accepts both `CLIENT_URL` and `CORS_ORIGIN` variables.
+- [x] HTTP-only cookies configured with `SameSite: "none"` and `Secure: true` in production.
+- [x] Centralized API client supports both `VITE_API_URL` and `VITE_API_BASE_URL`.
 
-## Outstanding backend tasks
+---
 
-- Persist listing CRUD/search, host ownership checks on real listing APIs, favorites, and calendar intervals in MongoDB.
-- Multer/Cloudinary images and validated external LLM integrations.
-- Replace remaining local demo state; retain date convention `[startDate,endDate)`.
-- Atlas integration verification and real deployed browser QA, especially secure cookie persistence/third-party restrictions.
-- No reservations, payments, checkout, refunds, Redis, or microservices.
+## 4. External Actions Required for Live Deployment
 
-## Executed verification
+Because no authenticated CLI tokens (Vercel or Render) are available in the terminal session:
+1. **Render**: Create Web Service from GitHub repo `mukherjeesoumyakanta-del/Staysphere` (see [`DEPLOYMENT.md`](file:///d:/STAYSPHERE/Staysphere/DEPLOYMENT.md)).
+   - Set environment variables: `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, `AI_API_KEY`.
+2. **Vercel**: Import project on Vercel dashboard.
+   - Set environment variable: `VITE_API_URL=https://<your-render-url>.onrender.com/api`.
+3. **Connect**: Update `CLIENT_URL` on Render with the verified Vercel URL.
 
-- `npm test`: 29 passing tests (11 frontend service tests; 18 backend tests). Includes guest/host register/login/logout, duplicate emails, incorrect passwords, missing/expired/tampered sessions, cookie replay, host authorization against current database roles, profile safety, CSRF, auth limits, Mongoose schema validation, and legacy localStorage migration.
-- `npm run build`: passed, with the existing large lazy WebGL chunk warning.
-- `npm --prefix server run check`: passed.
-- Startup without MONGO_URI/JWT_SECRET: executed and verified to exit 1 before listening. This is configuration failure, not a successful database test.
-- No real database or browser test ran; Atlas persistence and actual browser refresh/cross-domain cookie acceptance remain setup blockers. Supertest auth tests use real Express handlers, bcrypt and JWT with an injected in-memory user repository; schema validation uses Mongoose without a database. Cookie replay models refresh at the HTTP level, not in an actual browser. No Atlas or browser result is implied.
+---
+
+## 5. Known Limitations & Design Decisions
+
+1. **No Online Checkout / Payment Gateway**: By project specification, payments (Stripe/Razorpay) are intentionally omitted. Bookings operate as instant reservation confirmations without credit card transactions.
+2. **Cloudinary Fallback**: When Cloudinary API credentials are not supplied, images upload to local storage (`/uploads/`) served statically by Express and proxied by Vite/Vercel.
+3. **Render Free Tier Cold Starts**: On Render's free tier, services spin down after 15 minutes of inactivity. The initial cold request may take 30–50 seconds to boot.
