@@ -117,10 +117,6 @@ const listingSchema = new mongoose.Schema(
     },
     amenities: {
       type: [String],
-      validate: {
-        validator: (arr) => arr.every((a) => VALID_AMENITIES.includes(a)),
-        message: "Invalid amenity value",
-      },
       default: [],
     },
     images: {

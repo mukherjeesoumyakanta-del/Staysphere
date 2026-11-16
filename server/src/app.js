@@ -9,6 +9,7 @@ import { authRoutes } from "./routes/authRoutes.js";
 import { listingRoutes } from "./routes/listingRoutes.js";
 import { availabilityRoutes } from "./routes/availabilityRoutes.js";
 import { favoriteRoutes } from "./routes/favoriteRoutes.js";
+import { bookingRoutes } from "./routes/bookingRoutes.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
@@ -17,7 +18,7 @@ import { uploadsDir } from "./config/cloudinary.js";
 
 export function createApp(
   config = getConfig(),
-  { users, listings, availabilityRepo, favoriteRepo } = {}
+  { users, listings, availabilityRepo, favoriteRepo, bookingRepo } = {}
 ) {
   const app = express();
   app.locals.config = config;
@@ -44,7 +45,7 @@ export function createApp(
   app.use(
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      limit: 100,
+      limit: config.nodeEnv === "development" ? 10000 : 100,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       skip: (req) => req.path === "/api/health",
@@ -67,6 +68,7 @@ export function createApp(
       users,
       availabilityRepo,
       listingRepo: listings,
+      bookingRepo,
     })
   );
   app.use(
@@ -75,6 +77,14 @@ export function createApp(
       users,
       favoriteRepo,
       listingRepo: listings,
+    })
+  );
+  app.use(
+    "/api",
+    bookingRoutes(config, {
+      users,
+      listings,
+      bookingRepo,
     })
   );
   app.use("/api", apiRoutes);

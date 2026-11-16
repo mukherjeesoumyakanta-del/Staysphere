@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Listing } from "../models/Listing.js";
 
 export const listingRepository = {
@@ -57,6 +58,9 @@ export const listingRepository = {
   },
 
   async findById(id) {
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return null;
+    }
     return Listing.findById(id).lean();
   },
 

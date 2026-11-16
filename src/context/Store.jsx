@@ -28,7 +28,12 @@ export function StoreProvider({ children }) {
   const [apiFavorites, setApiFavorites] = useState(null);
 
   const restoreId = useRef(0);
-  const refresh = () => set({ ...read() });
+  const refresh = useCallback(() => set({ ...read() }), []);
+
+  const mutate = useCallback((fn) => {
+    write(fn);
+    set({ ...read() });
+  }, []);
 
   const refreshFavorites = useCallback(async () => {
     try {
@@ -78,11 +83,10 @@ export function StoreProvider({ children }) {
   const refreshApiListings = useCallback(async () => {
     setListingsLoading(true);
     try {
-      const result = await listingApiService.getListings({ page: 1 });
-      setApiListings(result.data.listings);
+      const result = await listingApiService.getListings({ page: 1, limit: 50 });
+      setApiListings(result.data.listings || []);
     } catch {
-      // Keep null so components know to show mock data or empty
-      setApiListings(null);
+      setApiListings([]);
     } finally {
       setListingsLoading(false);
     }
@@ -108,10 +112,10 @@ export function StoreProvider({ children }) {
     return unsubscribe;
   }, [restoreSession]);
 
-  // Fetch API listings on mount
+  // Fetch API listings on mount and when user identity changes
   useEffect(() => {
     refreshApiListings();
-  }, [refreshApiListings]);
+  }, [user, refreshApiListings]);
 
   // Fetch API favorites when user is logged in
   useEffect(() => {
@@ -127,8 +131,11 @@ export function StoreProvider({ children }) {
     location.href = "/";
   };
 
-  // Merge: prefer API listings when available, else fall back to local mock
-  const listings = apiListings !== null ? apiListings : state.listings;
+  // Single source of truth: real MongoDB listings combined with demo listings
+  const listings =
+    apiListings !== null && apiListings.length > 0
+      ? apiListings
+      : state.listings || [];
   const favorites = apiFavorites !== null ? apiFavorites : state.favorites;
 
   return (
@@ -148,10 +155,7 @@ export function StoreProvider({ children }) {
         restoreSession,
         refresh,
         reset,
-        mutate: (fn) => {
-          write(fn);
-          refresh();
-        },
+        mutate,
       }}
     >
       {children}

@@ -41,7 +41,10 @@ export default function AvailabilityCalendar({ blocks = [] }) {
           Host blocked
         </span>
       </div>
-      <small>Dates are for inspection only. Stays cannot be reserved.</small>
+      <small>
+        Green indicates available dates. Sand indicates booked dates; grey
+        indicates host blocks.
+      </small>
     </div>
   );
 }

@@ -165,12 +165,92 @@ export default function Auth({ signup = false }) {
             {signup ? "Sign in" : "Create an account"}
           </Link>
         </div>
-        <div className="demo-accounts">
-          <span className="eyebrow">YOUR ACCOUNT, YOUR SPACE</span>
-          <p>
-            Sign in with your registered email. Your session is managed using a
-            secure HTTP-only cookie.
+        <div
+          className="demo-accounts"
+          style={{
+            marginTop: "1.5rem",
+            padding: "1.25rem",
+            background: "rgba(0,0,0,0.03)",
+            borderRadius: "12px",
+            border: "1px dashed rgba(0,0,0,0.15)",
+          }}
+        >
+          <span className="eyebrow" style={{ display: "block", marginBottom: "0.5rem" }}>
+            QUICK DEMO ACCOUNTS
+          </span>
+          <p style={{ margin: "0 0 0.75rem", fontSize: "0.85rem" }}>
+            Click below to instantly sign in with a demo account:
           </p>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="button secondary"
+              style={{
+                fontSize: "0.85rem",
+                padding: "0.5rem 0.9rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+              }}
+              onClick={async () => {
+                setLoading(true);
+                setError("");
+                try {
+                  const { data } = await authService.login(
+                    "guest@demo.com",
+                    "Password123!"
+                  );
+                  refresh();
+                  const from = location.state?.from;
+                  navigate(from || "/guest/dashboard");
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <User size={15} /> Demo Guest Login
+            </button>
+            <button
+              type="button"
+              className="button secondary"
+              style={{
+                fontSize: "0.85rem",
+                padding: "0.5rem 0.9rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                cursor: "pointer",
+              }}
+              onClick={async () => {
+                setLoading(true);
+                setError("");
+                try {
+                  const { data } = await authService.login(
+                    "host@demo.com",
+                    "Password123!"
+                  );
+                  refresh();
+                  const from = location.state?.from;
+                  navigate(from || "/host/dashboard");
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              <House size={15} /> Demo Host Login
+            </button>
+          </div>
+          <small
+            className="muted"
+            style={{ display: "block", marginTop: "0.75rem", fontSize: "0.75rem" }}
+          >
+            Demo credentials: <strong>guest@demo.com</strong> or <strong>host@demo.com</strong> · Password: <code>Password123!</code>
+          </small>
         </div>
       </main>
     </div>

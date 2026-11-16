@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { availabilityRepository } from "../repositories/availabilityRepository.js";
 import { listingRepository } from "../repositories/listingRepository.js";
+import { bookingRepository } from "../repositories/bookingRepository.js";
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -43,12 +45,75 @@ export function createAvailabilityService(
   {
     availabilityRepo = availabilityRepository,
     listingRepo = listingRepository,
+    bookingRepo = bookingRepository,
   } = {}
 ) {
+  const getConfirmedBookings = async (listingId) => {
+    if (!bookingRepo || !bookingRepo.findConfirmedByListing) return [];
+    if (
+      bookingRepo === bookingRepository &&
+      mongoose.connection.readyState !== 1
+    ) {
+      return [];
+    }
+    try {
+      return (await bookingRepo.findConfirmedByListing(listingId)) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getListingBlocks = async (listingId) => {
+    if (!availabilityRepo || !availabilityRepo.findByListing) return [];
+    if (
+      availabilityRepo === availabilityRepository &&
+      mongoose.connection.readyState !== 1
+    ) {
+      return [];
+    }
+    try {
+      return (await availabilityRepo.findByListing(listingId)) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const checkBlockOverlap = async (listingId, sIn, sOut) => {
+    if (!availabilityRepo || !availabilityRepo.findOverlapping) return false;
+    if (
+      availabilityRepo === availabilityRepository &&
+      mongoose.connection.readyState !== 1
+    ) {
+      return false;
+    }
+    try {
+      return await availabilityRepo.findOverlapping(listingId, sIn, sOut);
+    } catch {
+      return false;
+    }
+  };
+
   return {
     async getBlocks(listingId) {
-      const blocks = await availabilityRepo.findByListing(listingId);
-      return blocks.map(formatBlock);
+      const [blocks, bookings] = await Promise.all([
+        getListingBlocks(listingId),
+        getConfirmedBookings(listingId),
+      ]);
+
+      const formattedBlocks = blocks.map(formatBlock);
+      const formattedBookings = (bookings || []).map((b) => ({
+        id: `booking-${b._id || b.id}`,
+        listingId: String(b.listingId),
+        startDate: b.checkIn,
+        endDate: b.checkOut,
+        start: b.checkIn,
+        end: b.checkOut,
+        reason: "BOOKED",
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt,
+      }));
+
+      return [...formattedBlocks, ...formattedBookings];
     },
 
     async addBlock(listingId, hostId, input) {
@@ -159,16 +224,20 @@ export function createAvailabilityService(
         );
       }
 
-      const overlap = await availabilityRepo.findOverlapping(
-        listingId,
-        sIn,
-        sOut
+      const [overlap, bookings] = await Promise.all([
+        checkBlockOverlap(listingId, sIn, sOut),
+        getConfirmedBookings(listingId),
+      ]);
+
+      const bookingOverlap = (bookings || []).some(
+        (b) => b.checkIn < sOut && b.checkOut > sIn
       );
+
       return {
         listingId: String(listingId),
         checkIn: sIn,
         checkOut: sOut,
-        available: !overlap,
+        available: !overlap && !bookingOverlap,
       };
     },
   };

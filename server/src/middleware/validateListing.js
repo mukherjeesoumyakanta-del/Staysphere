@@ -170,17 +170,15 @@ function validateFields(body, isCreate) {
     if (!Array.isArray(list)) {
       list = [list];
     }
-    list = list.filter((a) => typeof a === "string" && a.trim().length > 0);
-    const invalid = list.filter(
-      (a) => !VALID_AMENITIES.some((v) => v.toLowerCase() === a.toLowerCase())
-    );
-    if (invalid.length > 0) {
-      fields.amenities = `Invalid amenities: ${invalid.join(", ")}`;
-    } else {
-      validated.amenities = list.map(
-        (a) => VALID_AMENITIES.find((v) => v.toLowerCase() === a.toLowerCase()) || a
-      );
-    }
+    validated.amenities = list
+      .map((a) => (typeof a === "string" ? a.trim() : String(a).trim()))
+      .filter((a) => a.length > 0)
+      .map((a) => {
+        const canonical = VALID_AMENITIES.find(
+          (v) => v.toLowerCase() === a.toLowerCase()
+        );
+        return canonical || a;
+      });
   }
 
   // status (optional, only 'DRAFT' or 'ACTIVE')

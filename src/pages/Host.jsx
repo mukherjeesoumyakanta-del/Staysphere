@@ -16,6 +16,7 @@ import { useStore } from "../context/Store";
 import {
   listingApiService,
   availabilityApiService,
+  bookingApiService,
 } from "../services/listingApiService";
 import { availabilityService } from "../services";
 import { Button, money, ConfirmDialog, Field, Empty } from "../components/UI";
@@ -534,6 +535,158 @@ export function HostAvailability() {
             />
           )}
         </>
+      )}
+    </>
+  );
+}
+
+export function HostReservations() {
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    bookingApiService
+      .getHostBookings()
+      .then(setReservations)
+      .catch(() => setReservations([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <>
+      <div className="dashboard-title">
+        <div>
+          <span className="eyebrow">YOUR RESERVATIONS</span>
+          <h1>Guest reservations.</h1>
+          <p>Confirmed and past guest bookings across your properties.</p>
+        </div>
+        <CalendarDays size={27} />
+      </div>
+
+      {loading ? (
+        <div
+          className="skeleton"
+          style={{ height: 260, borderRadius: "12px" }}
+        />
+      ) : reservations.length === 0 ? (
+        <Empty
+          title="No reservations yet"
+          text="When guests book your published properties, their stays will appear here."
+        >
+          <Button to="/host/listings">View my listings</Button>
+        </Empty>
+      ) : (
+        <div
+          className="reservations-list"
+          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+        >
+          {reservations.map((r) => {
+            const propName = r.listing?.title || r.listing?.name || "Property";
+            const propLocation =
+              r.listing?.location ||
+              [r.listing?.city, r.listing?.state].filter(Boolean).join(", ");
+            const guestName = r.guest?.name || "Guest";
+            const guestEmail = r.guest?.email || "";
+            const isConfirmed = r.status === "CONFIRMED";
+
+            return (
+              <div
+                key={r.id || r._id}
+                className="panel reservation-card"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "1.25rem",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "1.25rem",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    <h3 style={{ margin: 0 }}>{guestName}</h3>
+                    {guestEmail && (
+                      <span className="muted" style={{ fontSize: "0.85rem" }}>
+                        ({guestEmail})
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: "0 0 0.25rem", fontSize: "0.95rem" }}>
+                    Booked <strong>{propName}</strong>{" "}
+                    {propLocation ? `· ${propLocation}` : ""}
+                  </p>
+                  <span
+                    style={{
+                      background: isConfirmed ? "#d1fae5" : "#f3f4f6",
+                      color: isConfirmed ? "#065f46" : "#6b7280",
+                      padding: "2px 8px",
+                      borderRadius: "4px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {r.status}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <span
+                      className="muted"
+                      style={{ fontSize: "0.75rem", display: "block" }}
+                    >
+                      DATES
+                    </span>
+                    <strong style={{ fontSize: "0.95rem" }}>{r.checkIn}</strong>
+                    <span style={{ margin: "0 4px" }}>→</span>
+                    <strong style={{ fontSize: "0.95rem" }}>{r.checkOut}</strong>
+                    <small className="muted" style={{ display: "block" }}>
+                      {r.totalNights} night{r.totalNights > 1 ? "s" : ""}
+                    </small>
+                  </div>
+
+                  <div>
+                    <span
+                      className="muted"
+                      style={{ fontSize: "0.75rem", display: "block" }}
+                    >
+                      PAYOUT
+                    </span>
+                    <strong style={{ fontSize: "1.1rem" }}>
+                      {money(r.totalPrice)}
+                    </strong>
+                  </div>
+
+                  <Link
+                    className="button secondary"
+                    to={
+                      "/property/" +
+                      (r.listing?.id || r.listing?._id || r.listingId)
+                    }
+                    target="_blank"
+                  >
+                    View Property <ArrowUpRight size={15} />
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </>
   );

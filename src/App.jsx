@@ -18,11 +18,13 @@ const guest = (name) =>
     lazy(() => import("./pages/Host").then((m) => ({ default: m[name] })));
 const GuestDashboard = guest("GuestDashboard"),
   Favorites = guest("Favorites"),
+  MyBookings = guest("MyBookings"),
   AIFinder = guest("AIFinder"),
   Profile = guest("Profile"),
   HostDashboard = host("HostDashboard"),
   Listings = host("Listings"),
-  HostAvailability = host("HostAvailability");
+  HostAvailability = host("HostAvailability"),
+  HostReservations = host("HostReservations");
 const About = lazy(() =>
     import("./pages/About").then((m) => ({ default: m.About })),
   ),
@@ -56,6 +58,7 @@ export default function App() {
             <Route element={<ProtectedRoute role="GUEST" />}>
               <Route element={<DashboardLayout role="GUEST" />}>
                 <Route path="/guest/dashboard" element={<GuestDashboard />} />
+                <Route path="/guest/bookings" element={<MyBookings />} />
                 <Route path="/guest/favorites" element={<Favorites />} />
                 <Route path="/guest/ai-finder" element={<AIFinder />} />
                 <Route path="/guest/profile" element={<Profile />} />
@@ -73,6 +76,10 @@ export default function App() {
                 <Route
                   path="/host/availability"
                   element={<HostAvailability />}
+                />
+                <Route
+                  path="/host/reservations"
+                  element={<HostReservations />}
                 />
                 <Route path="/host/profile" element={<Profile />} />
               </Route>

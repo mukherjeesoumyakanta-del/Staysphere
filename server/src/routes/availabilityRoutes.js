@@ -8,12 +8,13 @@ import { listingRepository } from "../repositories/listingRepository.js";
 
 export function availabilityRoutes(
   config,
-  { users, availabilityRepo, listingRepo } = {}
+  { users, availabilityRepo, listingRepo, bookingRepo } = {}
 ) {
   const router = Router();
   const service = createAvailabilityService(config, {
     availabilityRepo: availabilityRepo || availabilityRepository,
     listingRepo: listingRepo || listingRepository,
+    bookingRepo,
   });
   const controller = createAvailabilityController(service);
   const authService = createAuthService(config, users);

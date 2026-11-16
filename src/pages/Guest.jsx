@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Sparkles,
@@ -11,12 +11,30 @@ import {
   LoaderCircle,
   User,
   Check,
+  House,
+  CalendarDays,
 } from "lucide-react";
 import { useStore } from "../context/Store";
 import { aiService, authService } from "../services";
-import { PropertyGrid, Button, Field, Empty } from "../components/UI";
+import { bookingApiService } from "../services/listingApiService";
+import {
+  PropertyGrid,
+  Button,
+  Field,
+  Empty,
+  money,
+  ConfirmDialog,
+} from "../components/UI";
 export function GuestDashboard() {
   const { user, listings, favorites, recent } = useStore();
+  const [myBookings, setMyBookings] = useState([]);
+
+  useEffect(() => {
+    bookingApiService.getMyBookings().then(setMyBookings).catch(() => {});
+  }, []);
+
+  const confirmedBookings = myBookings.filter((b) => b.status === "CONFIRMED");
+
   return (
     <>
       <div className="dashboard-title">
@@ -30,6 +48,54 @@ export function GuestDashboard() {
           <ArrowUpRight size={17} />
         </Button>
       </div>
+
+      {confirmedBookings.length > 0 && (
+        <div className="panel" style={{ marginBottom: "2rem", padding: "1.25rem" }}>
+          <div className="section-heading" style={{ marginBottom: "1rem" }}>
+            <div>
+              <span className="eyebrow" style={{ color: "#059669" }}>RESERVED & READY</span>
+              <h2 style={{ fontSize: "1.3rem", margin: 0 }}>Upcoming journeys</h2>
+            </div>
+            <Link className="text-link" to="/guest/bookings">
+              View all bookings ({confirmedBookings.length})
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {confirmedBookings.slice(0, 2).map((b) => (
+              <div
+                key={b.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.75rem",
+                  padding: "0.75rem",
+                  background: "rgba(0,0,0,0.02)",
+                  borderRadius: "8px",
+                }}
+              >
+                <div>
+                  <strong>{b.listing?.title || b.listing?.name || "StaySphere Stay"}</strong>
+                  <div className="muted" style={{ fontSize: "0.85rem" }}>
+                    {b.checkIn} → {b.checkOut} · {b.totalNights} night{b.totalNights > 1 ? "s" : ""}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  <strong>{money(b.totalPrice)}</strong>
+                  <Button
+                    className="secondary"
+                    to={"/property/" + (b.listing?.id || b.listing?._id || b.listingId)}
+                  >
+                    View
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       <Link className="guest-ai-banner" to="/guest/ai-finder">
         <span className="sparkle-box">
           <Sparkles size={26} />
@@ -112,6 +178,247 @@ export function Favorites() {
         >
           <Button to="/explore">Explore stays</Button>
         </Empty>
+      )}
+    </>
+  );
+}
+
+export function MyBookings() {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadBookings = () => {
+    setLoading(true);
+    bookingApiService
+      .getMyBookings()
+      .then(setBookings)
+      .catch(() => setBookings([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  async function handleCancel(booking) {
+    setBusy(true);
+    setError("");
+    try {
+      await bookingApiService.cancelBooking(booking.id);
+      setCancelling(null);
+      loadBookings();
+    } catch (err) {
+      setError(err.message || "Failed to cancel booking.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="dashboard-title">
+        <div>
+          <span className="eyebrow">YOUR JOURNEYS</span>
+          <h1>My bookings.</h1>
+          <p>Upcoming and past reservations across your favourite spaces.</p>
+        </div>
+        <Button to="/explore">
+          Find another stay
+          <ArrowUpRight size={17} />
+        </Button>
+      </div>
+
+      {error && (
+        <div
+          className="info-box"
+          style={{
+            background: "#fef2f2",
+            borderColor: "#f87171",
+            color: "#991b1b",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <p style={{ margin: 0 }}>{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div
+          className="skeleton"
+          style={{ height: 260, borderRadius: "12px" }}
+        />
+      ) : bookings.length === 0 ? (
+        <Empty
+          title="No bookings yet"
+          text="When you reserve a stay, your confirmed dates will appear here."
+        >
+          <Button to="/explore">Explore stays</Button>
+        </Empty>
+      ) : (
+        <div
+          className="bookings-list"
+          style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
+        >
+          {bookings.map((b) => {
+            const propName =
+              b.listing?.title || b.listing?.name || "StaySphere Property";
+            const propLocation =
+              b.listing?.location ||
+              [b.listing?.city, b.listing?.state].filter(Boolean).join(", ");
+            const propImg = b.listing?.images?.[0] || "";
+            const isConfirmed = b.status === "CONFIRMED";
+
+            return (
+              <div
+                key={b.id}
+                className="panel booking-card"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "1.25rem",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "1.25rem",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    alignItems: "center",
+                    minWidth: "260px",
+                  }}
+                >
+                  {propImg ? (
+                    <img
+                      src={propImg}
+                      alt={propName}
+                      style={{
+                        width: 90,
+                        height: 72,
+                        borderRadius: 8,
+                        objectFit: "cover",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 90,
+                        height: 72,
+                        borderRadius: 8,
+                        background: "#e5e7eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#9ca3af",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <House size={28} />
+                    </div>
+                  )}
+                  <div>
+                    <h3 style={{ margin: "0 0 0.25rem" }}>{propName}</h3>
+                    <p
+                      className="muted"
+                      style={{ margin: "0 0 0.25rem", fontSize: "0.85rem" }}
+                    >
+                      {propLocation}
+                    </p>
+                    <span
+                      style={{
+                        background: isConfirmed ? "#d1fae5" : "#f3f4f6",
+                        color: isConfirmed ? "#065f46" : "#6b7280",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {b.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <span
+                      className="muted"
+                      style={{ fontSize: "0.75rem", display: "block" }}
+                    >
+                      DATES
+                    </span>
+                    <strong style={{ fontSize: "0.95rem" }}>{b.checkIn}</strong>
+                    <span style={{ margin: "0 4px" }}>→</span>
+                    <strong style={{ fontSize: "0.95rem" }}>{b.checkOut}</strong>
+                    <small className="muted" style={{ display: "block" }}>
+                      {b.totalNights} night{b.totalNights > 1 ? "s" : ""}
+                    </small>
+                  </div>
+
+                  <div>
+                    <span
+                      className="muted"
+                      style={{ fontSize: "0.75rem", display: "block" }}
+                    >
+                      TOTAL
+                    </span>
+                    <strong style={{ fontSize: "1.1rem" }}>
+                      {money(b.totalPrice)}
+                    </strong>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <Button
+                      className="secondary"
+                      to={
+                        "/property/" +
+                        (b.listing?.id || b.listing?._id || b.listingId)
+                      }
+                    >
+                      View Space
+                    </Button>
+                    {isConfirmed && (
+                      <Button
+                        className="danger"
+                        disabled={busy}
+                        onClick={() => setCancelling(b)}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {cancelling && (
+        <ConfirmDialog
+          title="Cancel this reservation?"
+          text={`Are you sure you want to cancel your stay at ${
+            cancelling.listing?.title ||
+            cancelling.listing?.name ||
+            "this property"
+          } (${cancelling.checkIn} to ${
+            cancelling.checkOut
+          })? This will immediately free these dates for other guests.`}
+          onConfirm={() => handleCancel(cancelling)}
+          onClose={() => setCancelling(null)}
+        />
       )}
     </>
   );

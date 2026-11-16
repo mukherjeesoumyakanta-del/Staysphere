@@ -44,19 +44,55 @@ export function Navbar() {
           <NavLink to="/about">Our story</NavLink>
         </nav>
         <div className="nav-actions">
-          <Link
-            className="host-link"
-            to={user?.role === "HOST" ? "/host/dashboard" : "/signup?role=HOST"}
-          >
-            Become a host <ArrowUpRight size={15} />
-          </Link>
-          <Button
-            className="nav-signin"
-            to={user ? `/${user.role.toLowerCase()}/dashboard` : "/login"}
-          >
-            {user ? "My workspace" : "Sign in"}
-            <ArrowUpRight size={15} />
-          </Button>
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <span className="tiny-tag" style={{ textTransform: "capitalize", padding: "3px 8px" }}>
+                {user.role?.toLowerCase()} · {user.name?.split(" ")[0] || "User"}
+              </span>
+              <Button
+                className="nav-signin"
+                to={`/${user.role.toLowerCase()}/dashboard`}
+              >
+                Workspace
+              </Button>
+              <button
+                className="button secondary"
+                style={{
+                  padding: "0.45rem 0.85rem",
+                  fontSize: "0.85rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  cursor: "pointer",
+                }}
+                onClick={async () => {
+                  try {
+                    await authService.logout();
+                  } finally {
+                    window.location.href = "/";
+                  }
+                }}
+              >
+                <LogOut size={14} /> Sign out
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                className="host-link"
+                to="/signup?role=HOST"
+              >
+                Become a host <ArrowUpRight size={15} />
+              </Link>
+              <Button
+                className="nav-signin"
+                to="/login"
+              >
+                Sign in
+                <ArrowUpRight size={15} />
+              </Button>
+            </>
+          )}
           <button
             className="icon-button mobile-toggle"
             aria-label="Toggle navigation"
@@ -145,11 +181,13 @@ export function DashboardLayout({ role }) {
     ? [
         [LayoutDashboard, "Overview", "/dashboard"],
         [House, "My listings", "/listings"],
+        [CalendarDays, "Reservations", "/reservations"],
         [CalendarDays, "Availability", "/availability"],
         [User, "Profile", "/profile"],
       ]
     : [
         [LayoutDashboard, "Overview", "/dashboard"],
+        [CalendarDays, "My Bookings", "/bookings"],
         [Heart, "Saved spaces", "/favorites"],
         [Sparkles, "AI Finder", "/ai-finder"],
         [User, "Profile", "/profile"],
