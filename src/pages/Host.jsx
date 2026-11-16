@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useEffect, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   House,
@@ -11,13 +11,35 @@ import {
   Trash2,
   ArrowRight,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, animate, useInView, useReducedMotion } from "framer-motion";
 import { useStore } from "../context/Store";
 import { listingService, availabilityService } from "../services";
 import { Button, money, ConfirmDialog, Field, Empty } from "../components/UI";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 import { dateAfter } from "../data/properties";
 const Analytics = lazy(() => import("../components/Analytics"));
+function AnimatedNumber({ value }) {
+  const ref = useRef();
+  const visible = useInView(ref, { once: true });
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (!visible) return;
+    if (reduced) {
+      ref.current.textContent = value;
+      return;
+    }
+    const controls = animate(0, value, {
+      duration: 1.1,
+      ease: "easeOut",
+      onUpdate: (n) => {
+        if (ref.current)
+          ref.current.textContent = Math.round(n).toLocaleString("en-IN");
+      },
+    });
+    return () => controls.stop();
+  }, [value, visible, reduced]);
+  return <b ref={ref}>{value}</b>;
+}
 export function HostDashboard() {
   const { user, listings } = useStore(),
     mine = listings.filter((p) => p.hostId === user.id);
@@ -59,13 +81,7 @@ export function HostDashboard() {
             <span>
               <Icon size={20} />
             </span>
-            <motion.b
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-            >
-              {value}
-            </motion.b>
+            <AnimatedNumber value={value} />
             <p>{label}</p>
             {i === 3 && <small>Simulated analytics</small>}
           </div>

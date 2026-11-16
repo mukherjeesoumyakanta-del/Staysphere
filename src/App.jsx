@@ -7,7 +7,7 @@ import {
   DashboardLayout,
 } from "./components/Layout";
 import { Loading } from "./components/UI";
-import Home from "./pages/Home";
+const Home = lazy(() => import("./pages/Home"));
 const Explore = lazy(() => import("./pages/Explore")),
   Property = lazy(() => import("./pages/Property")),
   Auth = lazy(() => import("./pages/Auth")),

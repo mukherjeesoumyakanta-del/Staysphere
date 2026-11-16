@@ -11,7 +11,12 @@ import {
   House,
   LoaderCircle,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useReducedMotion,
+} from "framer-motion";
 import { useStore } from "../context/Store";
 import { favoriteService } from "../services";
 export const money = (n) => "₹" + Number(n).toLocaleString("en-IN");
@@ -51,8 +56,33 @@ export function Reveal({ children, className = "" }) {
 }
 export function PropertyCard({ property: p }) {
   const { favorites, refresh } = useStore();
+  const reduced = useReducedMotion();
+  const x = useMotionValue(0),
+    y = useMotionValue(0);
+  const rotateX = useSpring(x, { stiffness: 180, damping: 24 });
+  const rotateY = useSpring(y, { stiffness: 180, damping: 24 });
+  const tilt = (event) => {
+    if (
+      reduced ||
+      event.pointerType !== "mouse" ||
+      !matchMedia("(hover: hover)").matches
+    )
+      return;
+    const r = event.currentTarget.getBoundingClientRect();
+    x.set((-(event.clientY - r.top - r.height / 2) / r.height) * 5);
+    y.set(((event.clientX - r.left - r.width / 2) / r.width) * 5);
+  };
   return (
-    <motion.article className="property-card" whileHover={{ y: -5 }}>
+    <motion.article
+      className="property-card"
+      style={{ rotateX, rotateY, transformPerspective: 1000 }}
+      onPointerMove={tilt}
+      onPointerLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+      whileHover={reduced ? {} : { y: -5 }}
+    >
       <Link to={"/property/" + p.id} className="card-image">
         <img
           loading="lazy"

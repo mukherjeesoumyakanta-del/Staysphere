@@ -4025,3 +4025,5 @@ footer {
     display: none;
   }
 }
+/* Dashboard motion stays light and separate from the public scroll sequences. */
+.sidebar{animation:workspace-enter .35s ease-out}.stat-card{animation:stat-enter .5s ease-out both;transition:box-shadow .25s,transform .25s}.stat-card:nth-child(2){animation-delay:.06s}.stat-card:nth-child(3){animation-delay:.12s}.stat-card:nth-child(4){animation-delay:.18s}.stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px #24391b0a}@keyframes workspace-enter{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}@keyframes stat-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.sidebar,.stat-card{animation:none}.stat-card:hover{transform:none}}
