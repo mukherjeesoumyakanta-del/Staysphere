@@ -7,7 +7,10 @@ import {
   useRef,
 } from "react";
 import { read, write, authService } from "../services";
-import { listingApiService } from "../services/listingApiService";
+import {
+  listingApiService,
+  favoriteApiService,
+} from "../services/listingApiService";
 
 const Store = createContext();
 
@@ -21,8 +24,52 @@ export function StoreProvider({ children }) {
   const [apiListings, setApiListings] = useState(null); // null = not yet fetched
   const [listingsLoading, setListingsLoading] = useState(false);
 
+  // API-backed favorites state (array of listing IDs)
+  const [apiFavorites, setApiFavorites] = useState(null);
+
   const restoreId = useRef(0);
   const refresh = () => set({ ...read() });
+
+  const refreshFavorites = useCallback(async () => {
+    try {
+      const ids = await favoriteApiService.getFavoriteIds();
+      setApiFavorites(ids);
+      // keep localStorage state in sync
+      write((s) => {
+        s.favorites = ids;
+      });
+    } catch {
+      // Not logged in or network issue; use local favorites
+      setApiFavorites(null);
+    }
+  }, []);
+
+  const toggleFavorite = useCallback(
+    async (listingId) => {
+      // Optimistic update locally
+      write((s) => {
+        s.favorites = s.favorites.includes(listingId)
+          ? s.favorites.filter((x) => x !== listingId)
+          : [...s.favorites, listingId];
+      });
+      refresh();
+
+      // If user is authenticated, sync with server
+      try {
+        const res = await favoriteApiService.toggleFavorite(listingId);
+        if (res && res.listingIds) {
+          setApiFavorites(res.listingIds);
+          write((s) => {
+            s.favorites = res.listingIds;
+          });
+          refresh();
+        }
+      } catch {
+        // Keep optimistic update or revert if desired
+      }
+    },
+    []
+  );
 
   /**
    * Fetch all public listings from the API and cache them in state.
@@ -66,6 +113,15 @@ export function StoreProvider({ children }) {
     refreshApiListings();
   }, [refreshApiListings]);
 
+  // Fetch API favorites when user is logged in
+  useEffect(() => {
+    if (user) {
+      refreshFavorites();
+    } else {
+      setApiFavorites(null);
+    }
+  }, [user, refreshFavorites]);
+
   const reset = () => {
     localStorage.removeItem("staysphere-v1");
     location.href = "/";
@@ -73,6 +129,7 @@ export function StoreProvider({ children }) {
 
   // Merge: prefer API listings when available, else fall back to local mock
   const listings = apiListings !== null ? apiListings : state.listings;
+  const favorites = apiFavorites !== null ? apiFavorites : state.favorites;
 
   return (
     <Store.Provider
@@ -82,6 +139,9 @@ export function StoreProvider({ children }) {
         listingsLoading,
         apiListings,
         refreshApiListings,
+        favorites,
+        toggleFavorite,
+        refreshFavorites,
         user,
         authLoading,
         authError,

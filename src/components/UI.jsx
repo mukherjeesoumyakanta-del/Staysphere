@@ -56,7 +56,7 @@ export function Reveal({ children, className = "" }) {
   );
 }
 export function PropertyCard({ property: p }) {
-  const { favorites, refresh } = useStore();
+  const { favorites, refresh, toggleFavorite } = useStore();
   const navigate = useNavigate(),
     { pathname } = useLocation();
   const shared = pathname === "/" || pathname === "/explore";
@@ -135,8 +135,12 @@ export function PropertyCard({ property: p }) {
           (favorites.includes(p.id) ? "Remove" : "Save") + " " + p.name
         }
         onClick={async () => {
-          await favoriteService.toggle(p.id);
-          refresh();
+          if (toggleFavorite) {
+            await toggleFavorite(p.id);
+          } else {
+            await favoriteService.toggle(p.id);
+            refresh();
+          }
         }}
       >
         <Heart

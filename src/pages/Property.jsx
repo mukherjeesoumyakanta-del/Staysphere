@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import { useStore } from "../context/Store";
 import { favoriteService } from "../services";
-import { listingApiService } from "../services/listingApiService";
+import {
+  listingApiService,
+  availabilityApiService,
+} from "../services/listingApiService";
 import { Button, PropertyGrid, money, Empty } from "../components/UI";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 
@@ -53,9 +56,10 @@ function PropertyDetailSkeleton() {
 
 export default function Property() {
   const { id } = useParams();
-  const { favorites, refresh, mutate, listings: storeListings } = useStore();
+  const { favorites, refresh, mutate, toggleFavorite } = useStore();
 
   const [p, setP] = useState(null);
+  const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [gallery, setGallery] = useState(null);
@@ -89,6 +93,11 @@ export default function Property() {
         }
       })
       .finally(() => setLoading(false));
+
+    availabilityApiService
+      .getBlocks(id)
+      .then((b) => setBlocks(b))
+      .catch(() => setBlocks([]));
   }, [id]);
 
   useEffect(() => {
@@ -140,8 +149,12 @@ export default function Property() {
         <Button
           className="secondary"
           onClick={async () => {
-            await favoriteService.toggle(id);
-            refresh();
+            if (toggleFavorite) {
+              await toggleFavorite(id);
+            } else {
+              await favoriteService.toggle(id);
+              refresh();
+            }
           }}
         >
           <Heart
@@ -209,16 +222,16 @@ export default function Property() {
               <p>Thoughtful spaces, simply managed.</p>
             </div>
           </section>
-          {p.blocks && p.blocks.length > 0 && (
-            <section className="detail-section">
-              <h2>Make room in your calendar</h2>
-              <p>
-                Availability is shown using demo data. Blocked dates cannot be
-                selected.
-              </p>
-              <AvailabilityCalendar blocks={p.blocks} />
-            </section>
-          )}
+          <section className="detail-section">
+            <h2>Make room in your calendar</h2>
+            <p>
+              Availability is shown for your planning. Blocked dates cannot be
+              selected.
+            </p>
+            <AvailabilityCalendar
+              blocks={blocks.length > 0 ? blocks : p.blocks || []}
+            />
+          </section>
         </div>
         <aside className="availability-card">
           <span>YOUR NEXT CHANGE OF SCENE</span>

@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 import { motion, animate, useInView, useReducedMotion } from "framer-motion";
 import { useStore } from "../context/Store";
-import { listingApiService } from "../services/listingApiService";
+import {
+  listingApiService,
+  availabilityApiService,
+} from "../services/listingApiService";
 import { availabilityService } from "../services";
 import { Button, money, ConfirmDialog, Field, Empty } from "../components/UI";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
@@ -327,17 +330,8 @@ export function HostAvailability() {
   const { user, refreshApiListings } = useStore();
   const [params] = useSearchParams();
   const [mine, setMine] = useState([]);
+  const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // For availability, we still use local store listings since availability
-    // is a local-only feature (blocks aren't persisted to API)
-    listingApiService
-      .getHostListings()
-      .then((r) => setMine(r.data))
-      .catch(() => setMine([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   const [id, setId] = useState(params.get("property") || ""),
     [f, setF] = useState({ start: "", end: "", reason: "Host Blocked" }),
@@ -345,10 +339,28 @@ export function HostAvailability() {
     [success, setSuccess] = useState(""),
     [deleting, setDeleting] = useState(null);
 
-  // Once mine is loaded, default to first property if none selected
+  const loadBlocks = (propId) => {
+    if (!propId) return;
+    availabilityApiService
+      .getBlocks(propId)
+      .then(setBlocks)
+      .catch(() => setBlocks([]));
+  };
+
   useEffect(() => {
-    if (!id && mine.length) setId(mine[0].id);
-  }, [mine]);
+    listingApiService
+      .getHostListings()
+      .then((r) => {
+        setMine(r.data);
+        if (r.data.length) {
+          const targetId = params.get("property") || r.data[0].id;
+          setId(targetId);
+          loadBlocks(targetId);
+        }
+      })
+      .catch(() => setMine([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const p = mine.find((p) => p.id === id);
 
@@ -357,13 +369,12 @@ export function HostAvailability() {
     setError("");
     setSuccess("");
     try {
-      await availabilityService.add(id, f);
+      await availabilityApiService.addBlock(id, f);
       setSuccess("Your calendar is up to date.");
       setF({ ...f, start: "", end: "" });
-      // Reload mine so calendar updates
-      listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
+      loadBlocks(id);
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Failed to save date range.");
     }
   }
 
@@ -392,7 +403,9 @@ export function HostAvailability() {
             <select
               value={id}
               onChange={(e) => {
-                setId(e.target.value);
+                const nextId = e.target.value;
+                setId(nextId);
+                loadBlocks(nextId);
                 setError("");
                 setSuccess("");
               }}
@@ -409,7 +422,7 @@ export function HostAvailability() {
               <div className="availability-layout">
                 <div className="panel">
                   <h2>{p.name}</h2>
-                  <AvailabilityCalendar blocks={p.blocks || []} />
+                  <AvailabilityCalendar blocks={blocks} />
                 </div>
                 <form className="panel" onSubmit={submit}>
                   <span className="eyebrow">SAVE TIME FOR WHAT MATTERS</span>
@@ -463,12 +476,15 @@ export function HostAvailability() {
               </div>
               <div className="panel dashboard-section">
                 <h2>Existing date ranges</h2>
-                {p.blocks && p.blocks.length ? (
-                  p.blocks.map((b) => (
+                {blocks && blocks.length ? (
+                  blocks.map((b) => (
                     <div key={b.id} className="block-row">
                       <span
                         className={
-                          "status " + (b.reason === "Booked" ? "booked" : "")
+                          "status " +
+                          (String(b.reason).toUpperCase() === "BOOKED"
+                            ? "booked"
+                            : "")
                         }
                       >
                         {b.reason}
@@ -499,9 +515,14 @@ export function HostAvailability() {
               text={`${deleting.start} to ${deleting.end} will be removed from this property's blocked ranges.`}
               onClose={() => setDeleting(null)}
               onConfirm={async () => {
-                await availabilityService.remove(id, deleting.id);
-                listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
-                setDeleting(null);
+                try {
+                  await availabilityApiService.removeBlock(deleting.id);
+                  loadBlocks(id);
+                  setDeleting(null);
+                } catch (e) {
+                  setError(e.message || "Failed to remove block.");
+                  setDeleting(null);
+                }
               }}
             />
           )}

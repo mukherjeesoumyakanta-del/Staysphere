@@ -5,12 +5,17 @@ import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { authRoutes } from "./routes/authRoutes.js";
 import { listingRoutes } from "./routes/listingRoutes.js";
+import { availabilityRoutes } from "./routes/availabilityRoutes.js";
+import { favoriteRoutes } from "./routes/favoriteRoutes.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
 import { getConfig } from "./config/env.js";
 
-export function createApp(config = getConfig(), { users, listings } = {}) {
+export function createApp(
+  config = getConfig(),
+  { users, listings, availabilityRepo, favoriteRepo } = {}
+) {
   const app = express();
   app.locals.config = config;
   app.disable("x-powered-by");
@@ -52,6 +57,22 @@ export function createApp(config = getConfig(), { users, listings } = {}) {
   app.use(cookieParser());
   app.use("/api/auth", authRoutes(config, users));
   app.use("/api", listingRoutes(config, { users, listings }));
+  app.use(
+    "/api",
+    availabilityRoutes(config, {
+      users,
+      availabilityRepo,
+      listingRepo: listings,
+    })
+  );
+  app.use(
+    "/api",
+    favoriteRoutes(config, {
+      users,
+      favoriteRepo,
+      listingRepo: listings,
+    })
+  );
   app.use("/api", apiRoutes);
   app.use(notFound);
   app.use(errorHandler);

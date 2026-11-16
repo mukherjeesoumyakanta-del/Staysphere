@@ -3,16 +3,16 @@ import "react-day-picker/style.css";
 const localDate = (s) => new Date(s + "T12:00:00");
 export default function AvailabilityCalendar({ blocks = [] }) {
   const booked = blocks
-    .filter((b) => b.reason === "Booked")
+    .filter((b) => String(b.reason).toUpperCase() === "BOOKED")
     .map((b) => ({
-      from: localDate(b.start),
-      to: new Date(localDate(b.end).getTime() - 86400000),
+      from: localDate(b.start || b.startDate),
+      to: new Date(localDate(b.end || b.endDate).getTime() - 86400000),
     }));
   const blocked = blocks
-    .filter((b) => b.reason !== "Booked")
+    .filter((b) => String(b.reason).toUpperCase() !== "BOOKED")
     .map((b) => ({
-      from: localDate(b.start),
-      to: new Date(localDate(b.end).getTime() - 86400000),
+      from: localDate(b.start || b.startDate),
+      to: new Date(localDate(b.end || b.endDate).getTime() - 86400000),
     }));
   return (
     <div className="availability-calendar">

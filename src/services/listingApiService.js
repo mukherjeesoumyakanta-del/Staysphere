@@ -98,6 +98,73 @@ export const listingApiService = {
   },
 };
 
+export const availabilityApiService = {
+  /** GET /api/availability/:listingId */
+  async getBlocks(listingId) {
+    const res = await apiRequest(`/availability/${listingId}`);
+    return res.data || [];
+  },
+
+  /** GET /api/availability/:listingId/check?checkIn=...&checkOut=... */
+  async checkAvailability(listingId, checkIn, checkOut) {
+    const res = await apiRequest(
+      `/availability/${listingId}/check?checkIn=${encodeURIComponent(checkIn)}&checkOut=${encodeURIComponent(checkOut)}`
+    );
+    return res.data;
+  },
+
+  /** POST /api/availability/:listingId/blocks */
+  async addBlock(listingId, { start, end, reason }) {
+    const res = await apiRequest(`/availability/${listingId}/blocks`, {
+      method: "POST",
+      body: { start, end, reason },
+    });
+    return res.data;
+  },
+
+  /** DELETE /api/availability/blocks/:blockId */
+  async removeBlock(blockId) {
+    const res = await apiRequest(`/availability/blocks/${blockId}`, {
+      method: "DELETE",
+    });
+    return res.data;
+  },
+};
+
+export const favoriteApiService = {
+  /** GET /api/favorites */
+  async getFavorites() {
+    const res = await apiRequest("/favorites");
+    return res.data;
+  },
+
+  /** GET /api/favorites/ids */
+  async getFavoriteIds() {
+    const res = await apiRequest("/favorites/ids");
+    return res.data || [];
+  },
+
+  /** POST /api/favorites/:listingId */
+  async addFavorite(listingId) {
+    const res = await apiRequest(`/favorites/${listingId}`, { method: "POST" });
+    return res.data;
+  },
+
+  /** DELETE /api/favorites/:listingId */
+  async removeFavorite(listingId) {
+    const res = await apiRequest(`/favorites/${listingId}`, {
+      method: "DELETE",
+    });
+    return res.data;
+  },
+
+  /** PUT /api/favorites/:listingId (toggle) */
+  async toggleFavorite(listingId) {
+    const res = await apiRequest(`/favorites/${listingId}`, { method: "PUT" });
+    return res.data;
+  },
+};
+
 function _buildFormData(fields, imageFiles) {
   const fd = new FormData();
   // Append scalar fields individually (multer reads them from req.body)

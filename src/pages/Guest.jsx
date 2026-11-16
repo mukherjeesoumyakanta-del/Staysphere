@@ -97,11 +97,22 @@ export function Favorites() {
         </div>
         <Heart />
       </div>
-      <PropertyGrid
-        properties={listings.filter(
-          (p) => favorites.includes(p.id) && p.status === "active",
-        )}
-      />
+      {listings.filter(
+        (p) => favorites.includes(p.id) && p.status === "active",
+      ).length ? (
+        <PropertyGrid
+          properties={listings.filter(
+            (p) => favorites.includes(p.id) && p.status === "active",
+          )}
+        />
+      ) : (
+        <Empty
+          title="A little wish list starts here"
+          text="Tap a heart on any property to keep it close."
+        >
+          <Button to="/explore">Explore stays</Button>
+        </Empty>
+      )}
     </>
   );
 }
