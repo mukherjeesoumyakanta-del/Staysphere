@@ -16,23 +16,83 @@ import {
 } from "lucide-react";
 import { useStore } from "../context/Store";
 import { favoriteService } from "../services";
+import { listingApiService } from "../services/listingApiService";
 import { Button, PropertyGrid, money, Empty } from "../components/UI";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
+
+/** Skeleton for the property detail page */
+function PropertyDetailSkeleton() {
+  return (
+    <main className="section property-detail">
+      <div className="skeleton" style={{ height: "16px", width: "120px", marginBottom: "1.5rem" }} />
+      <div className="skeleton" style={{ height: "36px", width: "50%", marginBottom: "0.5rem" }} />
+      <div className="skeleton" style={{ height: "16px", width: "30%", marginBottom: "1.5rem" }} />
+      <div className="gallery">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="skeleton"
+            style={{ height: "240px", borderRadius: "var(--radius, 12px)" }}
+          />
+        ))}
+      </div>
+      <div className="detail-layout">
+        <div>
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="skeleton"
+              style={{ height: "14px", width: `${60 + i * 8}%`, marginBottom: "12px" }}
+            />
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
 export default function Property() {
-  const { id } = useParams(),
-    { listings, favorites, refresh, mutate } = useStore(),
-    p = listings.find((x) => x.id === id);
+  const { id } = useParams();
+  const { favorites, refresh, mutate, listings: storeListings } = useStore();
+
+  const [p, setP] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [gallery, setGallery] = useState(null);
+
   useEffect(() => {
-    if (p)
-      mutate(
-        (s) =>
-          (s.recent = [id, ...s.recent.filter((x) => x !== id)].slice(0, 8)),
-      );
+    setLoading(true);
+    setNotFound(false);
+    setP(null);
     setGallery(null);
+
+    listingApiService
+      .getListingById(id)
+      .then((result) => {
+        const listing = result.data;
+        if (!listing || listing.status !== "active") {
+          setNotFound(true);
+        } else {
+          setP(listing);
+          // Record recent view in local state
+          mutate(
+            (s) =>
+              (s.recent = [id, ...s.recent.filter((x) => x !== id)].slice(0, 8)),
+          );
+        }
+      })
+      .catch((e) => {
+        if (e.status === 404 || e.code === "REQUEST_FAILED") {
+          setNotFound(true);
+        } else {
+          setNotFound(true);
+        }
+      })
+      .finally(() => setLoading(false));
   }, [id]);
+
   useEffect(() => {
-    if (gallery === null) return;
+    if (gallery === null || !p) return;
     const onKey = (e) => {
       if (e.key === "Escape") setGallery(null);
       if (e.key === "ArrowRight") setGallery((v) => (v + 1) % p.images.length);
@@ -41,8 +101,11 @@ export default function Property() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [gallery]);
-  if (!p || p.status !== "active")
+  }, [gallery, p]);
+
+  if (loading) return <PropertyDetailSkeleton />;
+
+  if (notFound || !p)
     return (
       <Empty
         title="This space is taking a break"
@@ -51,6 +114,12 @@ export default function Property() {
         <Button to="/explore">Explore stays</Button>
       </Empty>
     );
+
+  // Similar listings: from the store (may be API or mock), exclude current
+  const similar = storeListings
+    .filter((x) => x.id !== id && x.status === "active")
+    .slice(0, 3);
+
   return (
     <main className="section property-detail">
       <Link className="back-link" to="/explore">
@@ -120,39 +189,36 @@ export default function Property() {
             <h2>A little about this space</h2>
             <p>{p.description}</p>
           </section>
-          <section className="detail-section">
-            <h2>Thoughtful little comforts</h2>
-            <div className="amenity-grid">
-              {p.amenities.map((a) => (
-                <span key={a}>
-                  <Check size={17} />
-                  {a}
-                </span>
-              ))}
-            </div>
-          </section>
+          {p.amenities.length > 0 && (
+            <section className="detail-section">
+              <h2>Thoughtful little comforts</h2>
+              <div className="amenity-grid">
+                {p.amenities.map((a) => (
+                  <span key={a}>
+                    <Check size={17} />
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
           <section className="detail-section host-detail">
-            <span className="avatar">
-              {p.hostId === "host-demo" ? "A" : "S"}
-            </span>
+            <span className="avatar">H</span>
             <div>
-              <h3>
-                Hosted by{" "}
-                {p.hostId === "host-demo"
-                  ? "Arjun"
-                  : "the StaySphere demo host"}
-              </h3>
-              <p>Demo host profile · Thoughtful spaces, simply managed.</p>
+              <h3>Hosted by a StaySphere host</h3>
+              <p>Thoughtful spaces, simply managed.</p>
             </div>
           </section>
-          <section className="detail-section">
-            <h2>Make room in your calendar</h2>
-            <p>
-              Availability is shown using demo data. Blocked dates cannot be
-              selected.
-            </p>
-            <AvailabilityCalendar blocks={p.blocks} />
-          </section>
+          {p.blocks && p.blocks.length > 0 && (
+            <section className="detail-section">
+              <h2>Make room in your calendar</h2>
+              <p>
+                Availability is shown using demo data. Blocked dates cannot be
+                selected.
+              </p>
+              <AvailabilityCalendar blocks={p.blocks} />
+            </section>
+          )}
         </div>
         <aside className="availability-card">
           <span>YOUR NEXT CHANGE OF SCENE</span>
@@ -183,21 +249,19 @@ export default function Property() {
           </div>
         </aside>
       </div>
-      <section className="similar">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">KEEP YOUR CURIOSITY GOING</span>
-            <h2>
-              A few more <span>possibilities.</span>
-            </h2>
+      {similar.length > 0 && (
+        <section className="similar">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">KEEP YOUR CURIOSITY GOING</span>
+              <h2>
+                A few more <span>possibilities.</span>
+              </h2>
+            </div>
           </div>
-        </div>
-        <PropertyGrid
-          properties={listings
-            .filter((x) => x.id !== id && x.status === "active")
-            .slice(0, 3)}
-        />
-      </section>
+          <PropertyGrid properties={similar} />
+        </section>
+      )}
       {gallery !== null && (
         <div
           className="lightbox"

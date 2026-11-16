@@ -4,12 +4,13 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
 import { authRoutes } from "./routes/authRoutes.js";
+import { listingRoutes } from "./routes/listingRoutes.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
 import { getConfig } from "./config/env.js";
 
-export function createApp(config = getConfig(), { users } = {}) {
+export function createApp(config = getConfig(), { users, listings } = {}) {
   const app = express();
   app.locals.config = config;
   app.disable("x-powered-by");
@@ -50,6 +51,7 @@ export function createApp(config = getConfig(), { users } = {}) {
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
   app.use("/api/auth", authRoutes(config, users));
+  app.use("/api", listingRoutes(config, { users, listings }));
   app.use("/api", apiRoutes);
   app.use(notFound);
   app.use(errorHandler);

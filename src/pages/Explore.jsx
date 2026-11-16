@@ -1,31 +1,93 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, X, ArrowRight } from "lucide-react";
-import { useStore } from "../context/Store";
-import { filterListings } from "../services";
+import { listingApiService } from "../services/listingApiService";
 import { types, amenities } from "../data/properties";
 import { PropertyGrid, Button, Field } from "../components/UI";
+
+/** Skeleton card matching .property-card dimensions */
+function SkeletonCard() {
+  return (
+    <div className="property-card skeleton-card">
+      <div className="skeleton" style={{ height: "220px", borderRadius: "var(--radius, 12px)" }} />
+      <div style={{ padding: "1rem" }}>
+        <div className="skeleton" style={{ height: "12px", width: "60%", marginBottom: "8px" }} />
+        <div className="skeleton" style={{ height: "18px", width: "80%", marginBottom: "12px" }} />
+        <div className="skeleton" style={{ height: "12px", width: "40%" }} />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonGrid() {
+  return (
+    <div className="property-grid">
+      {[1, 2, 3, 4, 5, 6].map((n) => (
+        <SkeletonCard key={n} />
+      ))}
+    </div>
+  );
+}
+
 export default function Explore() {
-  const { listings } = useStore();
   const [params] = useSearchParams();
   const [f, setF] = useState(() => ({
-      q: params.get("q") || "",
-      max: params.get("max") || "",
-      guests: params.get("guests") || "",
-      amenities: [],
-    })),
-    [count, setCount] = useState(9),
-    [drawer, setDrawer] = useState(false),
-    [loading, setLoading] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 350);
-    return () => clearTimeout(t);
-  }, []);
-  const change = (k, v) => {
-      setF({ ...f, [k]: v });
-      setCount(9);
+    q: params.get("q") || "",
+    min: params.get("min") || "",
+    max: params.get("max") || "",
+    guests: params.get("guests") || "",
+    bedrooms: "",
+    type: "",
+    amenities: [],
+    sort: "new",
+  }));
+  const [drawer, setDrawer] = useState(false);
+
+  // API state
+  const [listings, setListings] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchListings = useCallback(
+    async (filters, pg) => {
+      setLoading(true);
+      setError("");
+      try {
+        const result = await listingApiService.getListings({ ...filters, page: pg });
+        const data = result.data;
+        setListings(data.listings);
+        setTotal(data.total);
+        setPage(data.page);
+        setPages(data.pages);
+      } catch (e) {
+        setError(e.message || "Failed to load listings.");
+        setListings([]);
+      } finally {
+        setLoading(false);
+      }
     },
-    results = filterListings(listings, f);
+    [],
+  );
+
+  // Fetch on mount and whenever filters change (debounced for text)
+  useEffect(() => {
+    const timer = setTimeout(() => fetchListings(f, 1), f.q ? 400 : 0);
+    return () => clearTimeout(timer);
+  }, [f, fetchListings]);
+
+  const change = (k, v) => {
+    setF((prev) => ({ ...prev, [k]: v }));
+    setPage(1);
+  };
+
+  const goToPage = (pg) => {
+    fetchListings(f, pg);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <main className="explore-page section">
       <div className="page-intro">
@@ -33,7 +95,7 @@ export default function Explore() {
         <h1>
           Find your next <em>somewhere.</em>
         </h1>
-        <p>Thoughtfully chosen stays, across places you’ll love.</p>
+        <p>Thoughtfully chosen stays, across places you'll love.</p>
       </div>
       <div className="explore-search">
         <Search size={20} />
@@ -54,7 +116,9 @@ export default function Explore() {
             <h3>Make it yours</h3>
             <button
               className="icon-button"
-              onClick={() => setF({ q: "", amenities: [] })}
+              onClick={() =>
+                setF({ q: "", min: "", max: "", guests: "", bedrooms: "", type: "", amenities: [], sort: "new" })
+              }
             >
               Reset
             </button>
@@ -141,14 +205,14 @@ export default function Explore() {
             className="filter-done mobile-toggle"
             onClick={() => setDrawer(false)}
           >
-            Show {results.length} stays
+            Show {total} stays
             <ArrowRight size={16} />
           </Button>
         </aside>
         <div className="results">
           <div className="result-toolbar">
             <span>
-              <b>{results.length}</b> spaces to call your own
+              <b>{loading ? "…" : total}</b> spaces to call your own
             </span>
             <select
               aria-label="Sort properties"
@@ -160,23 +224,52 @@ export default function Explore() {
               <option value="high">Price: high to low</option>
             </select>
           </div>
+          {error && (
+            <p role="alert" className="error">
+              {error}
+            </p>
+          )}
           {loading ? (
-            <div className="property-grid">
-              {[1, 2, 3, 4, 5, 6].map((n) => (
-                <div className="skeleton" key={n} />
-              ))}
+            <SkeletonGrid />
+          ) : listings.length === 0 ? (
+            <div className="empty">
+              <h2>No spaces found</h2>
+              <p>Try a different destination or loosen your filters.</p>
             </div>
           ) : (
-            <PropertyGrid properties={results.slice(0, count)} />
-          )}{" "}
-          {count < results.length && (
-            <Button
-              className="secondary load-more"
-              onClick={() => setCount(count + 6)}
+            <PropertyGrid properties={listings} />
+          )}
+          {/* Pagination */}
+          {!loading && pages > 1 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                justifyContent: "center",
+                marginTop: "2rem",
+                flexWrap: "wrap",
+              }}
             >
-              Discover more spaces
-              <ArrowRight size={16} />
-            </Button>
+              {page > 1 && (
+                <Button className="secondary" onClick={() => goToPage(page - 1)}>
+                  ← Previous
+                </Button>
+              )}
+              {Array.from({ length: pages }, (_, i) => i + 1).map((pg) => (
+                <Button
+                  key={pg}
+                  className={pg === page ? "" : "secondary"}
+                  onClick={() => goToPage(pg)}
+                >
+                  {pg}
+                </Button>
+              ))}
+              {page < pages && (
+                <Button className="secondary" onClick={() => goToPage(page + 1)}>
+                  Next →
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

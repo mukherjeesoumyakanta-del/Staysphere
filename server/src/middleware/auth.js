@@ -10,7 +10,12 @@ export function cookieOptions(config) {
 }
 export const authenticate = (service) => async (req, res, next) => {
   try {
-    req.user = await service.authenticate(req.cookies[COOKIE_NAME]);
+    const token =
+      req.cookies?.[COOKIE_NAME] ||
+      (req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization.slice(7)
+        : undefined);
+    req.user = await service.authenticate(token);
     next();
   } catch (error) {
     next(error);

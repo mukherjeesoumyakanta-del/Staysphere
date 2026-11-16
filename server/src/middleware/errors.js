@@ -13,6 +13,14 @@ export function errorHandler(error, req, res, next) {
     status = 400;
     code = "VALIDATION_ERROR";
     message = "Invalid account data";
+  } else if (error.name === "MulterError") {
+    status = 400;
+    code = error.code === "LIMIT_FILE_SIZE" ? "FILE_TOO_LARGE" : "INVALID_UPLOAD";
+    message = error.message;
+  } else if (error.message?.includes("Only JPEG, PNG, and WebP")) {
+    status = 400;
+    code = "INVALID_FILE_TYPE";
+    message = error.message;
   } else if (
     [
       "MongoServerSelectionError",

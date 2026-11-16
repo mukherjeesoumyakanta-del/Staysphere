@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   Sparkles,
@@ -9,38 +9,227 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useStore } from "../context/Store";
-import { listingService, aiService } from "../services";
+import { listingApiService } from "../services/listingApiService";
+import { aiService } from "../services";
 import { types, amenities } from "../data/properties";
 import { Button, Field, Empty } from "../components/UI";
+
+const MAX_SIZE = 4 * 1024 * 1024; // 4 MB
+const MAX_IMAGES = 6;
+const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Validate a File and return an error string or null */
+function validateFile(file) {
+  if (!ACCEPTED_TYPES.includes(file.type))
+    return "Use JPEG, PNG, or WebP images.";
+  if (file.size > MAX_SIZE)
+    return "Each image must be smaller than 4 MB.";
+  return null;
+}
+
+/** Preview item — either a File (new) or an existing URL string */
+function PreviewItem({ src, label, isNew, onRemove }) {
+  return (
+    <div>
+      <img src={src} alt={label} />
+      <button
+        aria-label={label}
+        className="icon-button"
+        type="button"
+        onClick={onRemove}
+      >
+        <X size={16} />
+      </button>
+      <small>
+        <Check size={12} />
+        {isNew ? "Ready · local preview" : "Uploaded"}
+      </small>
+    </div>
+  );
+}
+
 export default function PropertyForm() {
-  const { id } = useParams(),
-    { listings, user, refresh } = useStore(),
-    existing = listings.find((p) => p.id === id && p.hostId === user.id);
-  const [f, setF] = useState(() =>
-      existing
-        ? { ...existing }
-        : {
-            name: "",
-            location: "",
-            type: "Villa",
-            bedrooms: 1,
-            bathrooms: 1,
-            guests: 2,
-            price: "",
-            amenities: [],
-            images: [],
-            description: "",
-            highlights: "",
-          },
-    ),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [uploading, setUploading] = useState(false),
-    [generating, setGenerating] = useState(false),
-    [drag, setDrag] = useState(false);
+  const { id } = useParams();
+  const { user, refreshApiListings } = useStore();
   const navigate = useNavigate();
+
+  // Existing listing from API (edit mode)
+  const [existingListing, setExistingListing] = useState(null);
+  const [loadingExisting, setLoadingExisting] = useState(!!id);
+  const [notFound, setNotFound] = useState(false);
+
+  // Form fields
+  const [f, setF] = useState({
+    title: "",
+    city: "",
+    state: "",
+    location: "",
+    propertyType: "Villa",
+    bedrooms: 1,
+    bathrooms: 1,
+    maxGuests: 2,
+    pricePerNight: "",
+    amenities: [],
+    description: "",
+    highlights: "",
+    status: "DRAFT",
+  });
+
+  // Image state: existing URLs (from API) + new File objects
+  const [existingImages, setExistingImages] = useState([]); // [{url, publicId}]
+  const [newFiles, setNewFiles] = useState([]); // File[]
+  const [newPreviews, setNewPreviews] = useState([]); // data URL strings
+
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [drag, setDrag] = useState(false);
+
+  // Load existing listing for edit
+  useEffect(() => {
+    if (!id) return;
+    setLoadingExisting(true);
+    listingApiService
+      .getListingById(id)
+      .then((result) => {
+        const p = result.data;
+        // Verify host owns this
+        if (!p) { setNotFound(true); return; }
+        setExistingListing(p);
+        setExistingImages(p._images || []);
+        setF({
+          title: p.name || "",
+          city: p.city || "",
+          state: p.state || "",
+          location: p.location || "",
+          propertyType: p.type || "Villa",
+          bedrooms: p.bedrooms || 1,
+          bathrooms: p.bathrooms || 1,
+          maxGuests: p.guests || 2,
+          pricePerNight: p.price || "",
+          amenities: p.amenities || [],
+          description: p.description || "",
+          highlights: p.highlights || "",
+          status: (p.status || "draft").toUpperCase(),
+        });
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoadingExisting(false));
+  }, [id]);
+
   const set = (k, v) => setF((prev) => ({ ...prev, [k]: v }));
-  if (id && !existing)
+
+  const totalImages = existingImages.length + newFiles.length;
+
+  async function upload(files) {
+    setError("");
+    setUploading(true);
+    try {
+      const fileArr = [...files];
+      if (totalImages + fileArr.length > MAX_IMAGES)
+        throw Error(`Choose up to ${MAX_IMAGES} images per property.`);
+      const errors = fileArr.map(validateFile).filter(Boolean);
+      if (errors.length) throw Error(errors[0]);
+
+      // Build previews
+      const previews = await Promise.all(
+        fileArr.map(
+          (file) =>
+            new Promise((resolve, reject) => {
+              const r = new FileReader();
+              r.onload = () => resolve(r.result);
+              r.onerror = () => reject(Error("Unable to read this image."));
+              r.readAsDataURL(file);
+            }),
+        ),
+      );
+      setNewFiles((prev) => [...prev, ...fileArr]);
+      setNewPreviews((prev) => [...prev, ...previews]);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function generate() {
+    setGenerating(true);
+    setError("");
+    try {
+      // Build a shape compatible with the AI service
+      const mockP = {
+        name: f.title,
+        location: f.location || [f.city, f.state].filter(Boolean).join(", "),
+        type: f.propertyType,
+        bedrooms: f.bedrooms,
+        bathrooms: f.bathrooms,
+        guests: f.maxGuests,
+        amenities: f.amenities,
+        highlights: f.highlights,
+        price: f.pricePerNight,
+      };
+      set("description", (await aiService.generateListingDescription(mockP)).data);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const submittedStatus =
+        (e.nativeEvent.submitter?.value || "DRAFT").toUpperCase();
+      if (
+        submittedStatus === "ACTIVE" &&
+        totalImages === 0 &&
+        !f.description.trim()
+      )
+        throw Error("Add at least one image and a description before publishing.");
+      if (!f.title.trim()) throw Error("Property title is required.");
+      if (!f.city.trim() && !f.location.trim())
+        throw Error("City or location is required.");
+
+      const fields = {
+        title: f.title,
+        city: f.city || f.location.split(",")[0]?.trim() || "",
+        state: f.state || f.location.split(",")[1]?.trim() || "",
+        location: f.location || [f.city, f.state].filter(Boolean).join(", "),
+        propertyType: f.propertyType,
+        bedrooms: f.bedrooms,
+        bathrooms: f.bathrooms,
+        maxGuests: f.maxGuests,
+        pricePerNight: f.pricePerNight,
+        amenities: f.amenities,
+        description: f.description,
+        status: submittedStatus,
+      };
+      if (f.highlights) fields.highlights = f.highlights;
+
+      if (id) {
+        await listingApiService.updateListing(id, fields, newFiles);
+      } else {
+        await listingApiService.createListing(fields, newFiles);
+      }
+      refreshApiListings();
+      navigate("/host/listings");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (loadingExisting)
+    return (
+      <div className="skeleton" style={{ height: "400px", margin: "2rem" }} />
+    );
+
+  if (id && notFound)
     return (
       <Empty
         title="Listing not found"
@@ -49,78 +238,7 @@ export default function PropertyForm() {
         <Button to="/host/listings">My listings</Button>
       </Empty>
     );
-  async function upload(files) {
-    setError("");
-    setUploading(true);
-    try {
-      if (f.images.length + files.length > 6)
-        throw Error("Choose up to 6 images per property.");
-      const images = await Promise.all(
-        [...files].map(
-          (file) =>
-            new Promise((resolve, reject) => {
-              if (
-                !["image/jpeg", "image/png", "image/webp"].includes(file.type)
-              )
-                return reject(Error("Use JPEG, PNG, or WebP images."));
-              if (file.size > 2 * 1024 * 1024)
-                return reject(Error("Each image must be smaller than 2 MB."));
-              const r = new FileReader();
-              r.onload = () => resolve(r.result);
-              r.onerror = () => reject(Error("Unable to read this image."));
-              r.readAsDataURL(file);
-            }),
-        ),
-      );
-      setF((prev) => ({ ...prev, images: [...prev.images, ...images] }));
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setUploading(false);
-    }
-  }
-  async function generate() {
-    setGenerating(true);
-    setError("");
-    try {
-      set("description", (await aiService.generateListingDescription(f)).data);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setGenerating(false);
-    }
-  }
-  async function submit(e) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const status = e.nativeEvent.submitter?.value || "draft";
-      if (status === "active" && (!f.images.length || !f.description.trim()))
-        throw Error(
-          "Add at least one image and a description before publishing.",
-        );
-      const p = {
-        ...f,
-        id: existing?.id || crypto.randomUUID(),
-        hostId: user.id,
-        price: +f.price,
-        bedrooms: +f.bedrooms,
-        bathrooms: +f.bathrooms,
-        guests: +f.guests,
-        blocks: existing?.blocks || [],
-        createdAt: existing?.createdAt || Date.now(),
-        status,
-      };
-      await listingService.save(p);
-      refresh();
-      navigate("/host/listings");
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+
   return (
     <>
       <Link className="back-link" to="/host/listings">
@@ -131,7 +249,7 @@ export default function PropertyForm() {
         <div>
           <span className="eyebrow">A SPACE WORTH SHARING</span>
           <h1>
-            {existing ? "Refine your space." : "Let your space tell its story."}
+            {existingListing ? "Refine your space." : "Let your space tell its story."}
           </h1>
           <p>
             A few thoughtful details help the right people discover your
@@ -146,43 +264,57 @@ export default function PropertyForm() {
           <Field
             label="Property title"
             required
-            value={f.name}
-            maxLength={100}
-            onChange={(e) => set("name", e.target.value)}
+            value={f.title}
+            maxLength={120}
+            onChange={(e) => set("title", e.target.value)}
             placeholder="The Palm House"
           />
           <div className="field-row">
             <Field
-              label="Location"
+              label="City"
               required
-              value={f.location}
-              onChange={(e) => set("location", e.target.value)}
-              placeholder="Assagao, Goa"
+              value={f.city}
+              onChange={(e) => set("city", e.target.value)}
+              placeholder="Assagao"
             />
-            <Field label="Property type">
-              <select
-                value={f.type}
-                onChange={(e) => set("type", e.target.value)}
-              >
-                {types.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </Field>
+            <Field
+              label="State"
+              required
+              value={f.state}
+              onChange={(e) => set("state", e.target.value)}
+              placeholder="Goa"
+            />
           </div>
+          <Field
+            label="Full address / location"
+            required
+            value={f.location}
+            onChange={(e) => set("location", e.target.value)}
+            placeholder="Assagao, Goa"
+          />
+          <Field label="Property type">
+            <select
+              value={f.propertyType}
+              onChange={(e) => set("propertyType", e.target.value)}
+            >
+              {types.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </Field>
           <div className="field-row three">
             {[
               ["bedrooms", "Bedrooms"],
               ["bathrooms", "Bathrooms"],
-              ["guests", "Maximum guests"],
+              ["maxGuests", "Maximum guests"],
             ].map(([k, label]) => (
               <Field
                 key={k}
                 label={label}
                 type="number"
                 required
-                min="1"
-                max="30"
+                min="0"
+                max="20"
                 value={f[k]}
                 onChange={(e) => set(k, e.target.value)}
               />
@@ -191,10 +323,10 @@ export default function PropertyForm() {
           <Field
             label="Nightly price (INR)"
             type="number"
-            min="100"
+            min="1"
             required
-            value={f.price}
-            onChange={(e) => set("price", e.target.value)}
+            value={f.pricePerNight}
+            onChange={(e) => set("pricePerNight", e.target.value)}
             placeholder="5000"
           />
         </section>
@@ -251,40 +383,46 @@ export default function PropertyForm() {
                 : "Drop your favourite views here"}
             </b>
             <span>
-              or click to choose · JPEG, PNG, WebP · Up to 2 MB each · 6 images
+              or click to choose · JPEG, PNG, WebP · Up to 4 MB each · {MAX_IMAGES} images max
             </span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
               onChange={(e) => upload(e.target.files)}
-              disabled={uploading}
+              disabled={uploading || totalImages >= MAX_IMAGES}
             />
           </label>
           <div className="upload-previews">
-            {f.images.map((image, i) => (
-              <div key={i}>
-                <img src={image} alt={"Listing preview " + (i + 1)} />
-                <button
-                  aria-label={"Remove image " + (i + 1)}
-                  className="icon-button"
-                  type="button"
-                  onClick={() =>
-                    set(
-                      "images",
-                      f.images.filter((_, j) => i !== j),
-                    )
-                  }
-                >
-                  <X size={16} />
-                </button>
-                <small>
-                  <Check size={12} />
-                  Ready · local preview
-                </small>
-              </div>
+            {/* Existing uploaded images */}
+            {existingImages.map((img, i) => (
+              <PreviewItem
+                key={"existing-" + i}
+                src={img.url || img}
+                label={"Remove uploaded image " + (i + 1)}
+                isNew={false}
+                onRemove={() =>
+                  setExistingImages((prev) => prev.filter((_, j) => j !== i))
+                }
+              />
+            ))}
+            {/* New file previews */}
+            {newPreviews.map((preview, i) => (
+              <PreviewItem
+                key={"new-" + i}
+                src={preview}
+                label={"Remove new image " + (i + 1)}
+                isNew={true}
+                onRemove={() => {
+                  setNewFiles((prev) => prev.filter((_, j) => j !== i));
+                  setNewPreviews((prev) => prev.filter((_, j) => j !== i));
+                }}
+              />
             ))}
           </div>
+          {totalImages >= MAX_IMAGES && (
+            <p className="muted">Maximum of {MAX_IMAGES} images reached.</p>
+          )}
         </section>
         <section className="panel">
           <div className="section-heading">
@@ -330,19 +468,21 @@ export default function PropertyForm() {
             <Button
               className="secondary"
               name="status"
-              value="draft"
+              value="DRAFT"
               type="submit"
               disabled={busy || uploading}
             >
+              {busy ? <LoaderCircle className="spin" size={16} /> : null}
               Save draft
             </Button>
             <Button
               name="status"
-              value="active"
+              value="ACTIVE"
               type="submit"
               disabled={busy || uploading}
             >
-              Publish demo listing
+              {busy ? <LoaderCircle className="spin" size={16} /> : null}
+              Publish listing
               <ArrowLeft className="rotate" size={16} />
             </Button>
           </div>

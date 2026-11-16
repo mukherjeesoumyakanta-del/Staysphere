@@ -13,11 +13,13 @@ import {
 } from "lucide-react";
 import { motion, animate, useInView, useReducedMotion } from "framer-motion";
 import { useStore } from "../context/Store";
-import { listingService, availabilityService } from "../services";
+import { listingApiService } from "../services/listingApiService";
+import { availabilityService } from "../services";
 import { Button, money, ConfirmDialog, Field, Empty } from "../components/UI";
 import AvailabilityCalendar from "../components/AvailabilityCalendar";
 import { dateAfter } from "../data/properties";
 const Analytics = lazy(() => import("../components/Analytics"));
+
 function AnimatedNumber({ value }) {
   const ref = useRef();
   const visible = useInView(ref, { once: true });
@@ -40,9 +42,46 @@ function AnimatedNumber({ value }) {
   }, [value, visible, reduced]);
   return <b ref={ref}>{value}</b>;
 }
+
+/** Skeleton row for host listing table */
+function SkeletonRow() {
+  return (
+    <div className="listing-row">
+      <div className="skeleton" style={{ width: 72, height: 52, borderRadius: 8, flexShrink: 0 }} />
+      <div className="listing-name" style={{ flex: 1 }}>
+        <div className="skeleton" style={{ height: 16, width: "60%", marginBottom: 6 }} />
+        <div className="skeleton" style={{ height: 12, width: "40%" }} />
+      </div>
+      <div className="skeleton" style={{ height: 24, width: 60, borderRadius: 20 }} />
+      <div className="skeleton" style={{ height: 16, width: 80 }} />
+    </div>
+  );
+}
+
+function SkeletonTable() {
+  return (
+    <div className="listing-table">
+      {[1, 2, 3].map((n) => (
+        <SkeletonRow key={n} />
+      ))}
+    </div>
+  );
+}
+
 export function HostDashboard() {
-  const { user, listings } = useStore(),
-    mine = listings.filter((p) => p.hostId === user.id);
+  const { user, refreshApiListings } = useStore();
+  const [mine, setMine] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    listingApiService
+      .getHostListings()
+      .then((r) => setMine(r.data))
+      .catch(() => setMine([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const stats = [
     [House, "Total properties", mine.length],
     [
@@ -53,10 +92,11 @@ export function HostDashboard() {
     [
       CalendarDays,
       "With blocked dates",
-      mine.filter((p) => p.blocks.length).length,
+      mine.filter((p) => p.blocks && p.blocks.length).length,
     ],
     [Eye, "Demo property views", 677],
   ];
+
   return (
     <>
       <div className="dashboard-title">
@@ -66,7 +106,7 @@ export function HostDashboard() {
           </span>
           <h1>Your spaces, at a glance.</h1>
           <p>
-            Welcome back, {user.name}. Here’s what’s happening with your
+            Welcome back, {user.name}. Here's what's happening with your
             properties.
           </p>
         </div>
@@ -121,26 +161,71 @@ export function HostDashboard() {
           <ArrowUpRight size={16} />
         </Link>
       </div>
-      <ListingTable items={mine.slice(0, 4)} />
+      {loading ? (
+        <SkeletonTable />
+      ) : (
+        <ListingTable items={mine.slice(0, 4)} onRefresh={() => {
+          listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
+        }} />
+      )}
     </>
   );
 }
-export function ListingTable({ items }) {
+
+export function ListingTable({ items, onRefresh }) {
   const [deleting, setDeleting] = useState(null),
+    [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const { refresh } = useStore();
+  const { refreshApiListings } = useStore();
+
+  async function handleDelete(p) {
+    setBusy(true);
+    setError("");
+    try {
+      await listingApiService.deleteListing(p.id);
+      setDeleting(null);
+      if (onRefresh) onRefresh();
+      refreshApiListings();
+    } catch (e) {
+      setError(e.message || "Failed to delete listing.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="listing-table">
         {items.length ? (
           items.map((p) => (
             <div className="listing-row" key={p.id}>
-              <img src={p.images[0]} alt={p.name} />
+              <img
+                src={p.images[0] || ""}
+                alt={p.name}
+                style={p.images[0] ? undefined : { background: "#eee" }}
+              />
               <div className="listing-name">
                 <h3>{p.name}</h3>
                 <span>{p.location}</span>
               </div>
-              <span className={"status " + p.status}>{p.status}</span>
+              <span className={"status " + p.status}>
+                {p.status}
+                {p.status === "draft" && (
+                  <span
+                    style={{
+                      marginLeft: "4px",
+                      fontSize: "0.65rem",
+                      background: "#f59e0b",
+                      color: "#fff",
+                      borderRadius: "4px",
+                      padding: "1px 4px",
+                      verticalAlign: "middle",
+                    }}
+                  >
+                    DRAFT
+                  </span>
+                )}
+              </span>
               <b>
                 {money(p.price)}
                 <small> / night</small>
@@ -161,6 +246,7 @@ export function ListingTable({ items }) {
                 <button
                   aria-label={"Delete " + p.name}
                   onClick={() => setDeleting(p)}
+                  disabled={busy}
                 >
                   <Trash2 size={17} />
                 </button>
@@ -180,24 +266,33 @@ export function ListingTable({ items }) {
       {deleting && (
         <ConfirmDialog
           title="Remove this space?"
-          text={`“${deleting.name}” and its availability will be removed from the demo.`}
+          text={`"${deleting.name}" will be permanently removed.`}
           onClose={() => setDeleting(null)}
-          onConfirm={async () => {
-            try {
-              await listingService.remove(deleting.id);
-              refresh();
-              setDeleting(null);
-            } catch (e) {
-              setError(e.message);
-            }
-          }}
+          onConfirm={() => handleDelete(deleting)}
         />
       )}
     </>
   );
 }
+
 export function Listings() {
-  const { user, listings } = useStore();
+  const { user, refreshApiListings } = useStore();
+  const [mine, setMine] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchMine = () => {
+    setLoading(true);
+    listingApiService
+      .getHostListings()
+      .then((r) => setMine(r.data))
+      .catch(() => setMine([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchMine();
+  }, []);
+
   return (
     <>
       <div className="dashboard-title">
@@ -213,33 +308,65 @@ export function Listings() {
           Add a property
         </Button>
       </div>
-      <ListingTable items={listings.filter((p) => p.hostId === user.id)} />
+      {loading ? (
+        <SkeletonTable />
+      ) : (
+        <ListingTable
+          items={mine}
+          onRefresh={() => {
+            fetchMine();
+            refreshApiListings();
+          }}
+        />
+      )}
     </>
   );
 }
+
 export function HostAvailability() {
-  const { user, listings, refresh } = useStore(),
-    [params] = useSearchParams(),
-    mine = listings.filter((p) => p.hostId === user.id);
-  const [id, setId] = useState(params.get("property") || mine[0]?.id || ""),
+  const { user, refreshApiListings } = useStore();
+  const [params] = useSearchParams();
+  const [mine, setMine] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // For availability, we still use local store listings since availability
+    // is a local-only feature (blocks aren't persisted to API)
+    listingApiService
+      .getHostListings()
+      .then((r) => setMine(r.data))
+      .catch(() => setMine([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const [id, setId] = useState(params.get("property") || ""),
     [f, setF] = useState({ start: "", end: "", reason: "Host Blocked" }),
     [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
     [deleting, setDeleting] = useState(null);
+
+  // Once mine is loaded, default to first property if none selected
+  useEffect(() => {
+    if (!id && mine.length) setId(mine[0].id);
+  }, [mine]);
+
   const p = mine.find((p) => p.id === id);
+
   async function submit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
     try {
       await availabilityService.add(id, f);
-      refresh();
       setSuccess("Your calendar is up to date.");
       setF({ ...f, start: "", end: "" });
+      // Reload mine so calendar updates
+      listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
     } catch (e) {
       setError(e.message);
     }
   }
+
   return (
     <>
       <div className="dashboard-title">
@@ -250,7 +377,9 @@ export function HostAvailability() {
         </div>
         <CalendarDays size={27} />
       </div>
-      {!mine.length ? (
+      {loading ? (
+        <div className="skeleton" style={{ height: 300 }} />
+      ) : !mine.length ? (
         <Empty
           title="Add a space first"
           text="Your property calendar will appear here."
@@ -280,7 +409,7 @@ export function HostAvailability() {
               <div className="availability-layout">
                 <div className="panel">
                   <h2>{p.name}</h2>
-                  <AvailabilityCalendar blocks={p.blocks} />
+                  <AvailabilityCalendar blocks={p.blocks || []} />
                 </div>
                 <form className="panel" onSubmit={submit}>
                   <span className="eyebrow">SAVE TIME FOR WHAT MATTERS</span>
@@ -334,7 +463,7 @@ export function HostAvailability() {
               </div>
               <div className="panel dashboard-section">
                 <h2>Existing date ranges</h2>
-                {p.blocks.length ? (
+                {p.blocks && p.blocks.length ? (
                   p.blocks.map((b) => (
                     <div key={b.id} className="block-row">
                       <span
@@ -367,11 +496,11 @@ export function HostAvailability() {
           {deleting && (
             <ConfirmDialog
               title="Open these dates again?"
-              text={`${deleting.start} to ${deleting.end} will be removed from this property’s blocked ranges.`}
+              text={`${deleting.start} to ${deleting.end} will be removed from this property's blocked ranges.`}
               onClose={() => setDeleting(null)}
               onConfirm={async () => {
                 await availabilityService.remove(id, deleting.id);
-                refresh();
+                listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
                 setDeleting(null);
               }}
             />

@@ -11,10 +11,12 @@
     "start": "node src/server.js",
     "test": "node --test",
     "check": "node --check src/server.js && node --check src/app.js",
-    "check:db": "node scripts/check-database.js"
+    "check:db": "node scripts/check-database.js",
+    "seed": "node scripts/seed-listings.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -22,7 +24,8 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.12.1"
+    "mongoose": "^9.12.1",
+    "multer": "^2.5.0"
   },
   "devDependencies": {
     "supertest": "^7.1.4"
