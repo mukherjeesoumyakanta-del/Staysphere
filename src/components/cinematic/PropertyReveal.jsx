@@ -19,8 +19,9 @@ export default function PropertyReveal() {
             scrollTrigger: {
               trigger: root.current,
               start: conditions.desktop ? "top top" : "top 75%",
-              end: () => "+=" + innerHeight * (conditions.desktop ? 1.7 : 0.85),
-              pin: conditions.desktop ? stage.current : false,
+              end: conditions.desktop
+                ? "bottom bottom"
+                : () => "+=" + innerHeight * 0.85,
               scrub: 0.7,
               invalidateOnRefresh: true,
             },

@@ -42,3 +42,10 @@ For deployment: import the repo into Vercel and create the Render web service us
 - `PORT=5087 npm --prefix server start`: started successfully; actual `curl -i http://127.0.0.1:5087/api/health` returned HTTP 200 and the documented JSON. The test server was then stopped using SIGTERM.
 - Environment/dependency/build ignore rules checked with Git; only blank `.env.example` templates are included. No tracked frontend visual source file changed.
 - No browser UI, MongoDB, Cloudinary, LLM, Render, or Vercel live integration testing is claimed.
+
+## Homepage scroll cleanup
+
+- Replaced GSAP pin/spacer layout with native sticky stages for the villa, image reveal, destinations, and horizontal gallery; timelines follow each section's actual bounds.
+- Removed hero/search whitespace and scoped a continuous forest background to the homepage's formerly pale sections. Guest/host screens and the Express skeleton are unchanged.
+- Destination layers now begin with only the first scene visible on animated desktop, preventing the final Jaipur layer flashing before its turn. Jaipur remains a single destination record; destination buttons retain the correct filtered links.
+- `npm run build` and all 14 tests passed. Browser scrolling, reverse scrolling, viewport resizing, and mobile visual verification remain manual because the required browser tool is unavailable.

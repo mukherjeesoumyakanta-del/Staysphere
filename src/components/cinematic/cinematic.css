@@ -1422,4 +1422,209 @@
     animation: none !important;
   }
 }
-.property-view-transition #root>div{opacity:1!important}
+.property-view-transition #root > div {
+  opacity: 1 !important;
+}
+/* Continuous film surface. Native sticky stages do not create pin-spacer pages. */
+.cinematic-home {
+  background: #102a21;
+  color: #edf0df;
+}
+.cinematic-home main {
+  background: #102a21;
+}
+.cinematic-home .cinema-hero {
+  margin-bottom: 0;
+}
+.cinematic-home .cinema-hero .search-bar {
+  bottom: 22px;
+}
+.cinematic-home .cinema-scroll {
+  bottom: 135px;
+}
+.cinematic-home .cinema-location {
+  bottom: 140px;
+}
+.cinematic-home .house-scroll {
+  background: #102a21;
+}
+.cinematic-home .house-stage {
+  background: radial-gradient(ellipse at 65% 50%, #35523e, #142e25 75%);
+}
+.cinematic-home .house-message h2 {
+  color: #eef0df;
+}
+.cinematic-home .house-message h2 em {
+  color: #bbca9f;
+}
+.cinematic-home .house-message > span,
+.cinematic-home .house-message p,
+.cinematic-home .house-heading .eyebrow,
+.cinematic-home .house-caption,
+.cinematic-home .house-bottom {
+  color: #a5b59a;
+}
+.cinematic-home .property-portal,
+.cinematic-home .portal-stage {
+  background: #152e25;
+}
+.cinematic-home .portal-type {
+  color: #ced7b7;
+  mix-blend-mode: normal;
+}
+.cinematic-home .portal-index {
+  color: #c2cfb0;
+}
+.cinematic-home .featured,
+.cinematic-home .why {
+  background: #102a21;
+  max-width: none;
+  padding-top: 45px;
+  padding-bottom: 45px;
+}
+.cinematic-home .section-heading h2 {
+  color: #edf0df;
+}
+.cinematic-home .section-heading h2 span {
+  color: #a3b28f;
+}
+.cinematic-home .section-heading p,
+.cinematic-home .eyebrow,
+.cinematic-home .why-grid p {
+  color: #a6b79a;
+}
+.cinematic-home .text-link {
+  color: #dce8cb;
+}
+.cinematic-home .category-tabs button {
+  background: #19372b;
+  border-color: #3d5740;
+  color: #b4c4a7;
+}
+.cinematic-home .category-tabs button.active {
+  background: #d2ddbf;
+  color: #244432;
+  border-color: #d2ddbf;
+}
+.cinematic-home .reel-number,
+.cinematic-home .reel-card .card-title,
+.cinematic-home .reel-card .card-price b {
+  color: #e6edd8;
+}
+.cinematic-home .gallery-reel-label,
+.cinematic-home .location,
+.cinematic-home .card-spec,
+.cinematic-home .reel-number i,
+.cinematic-home .card-price {
+  color: #a4b394;
+}
+.cinematic-home .why-grid > div {
+  border-color: #3d5740;
+}
+.cinematic-home .why-icon {
+  color: #b1c69c;
+}
+.cinematic-home .why-grid small {
+  color: #8ba17a;
+}
+.cinematic-gallery {
+  overflow: visible;
+  padding: 0;
+}
+.gallery-stage {
+  overflow: hidden;
+  padding: 20px 0 35px;
+  background: #102a21;
+}
+.destination-story {
+  background: #162f25;
+}
+@media (min-width: 801px) and (prefers-reduced-motion: no-preference) {
+  .house-scroll-enabled {
+    height: 380svh;
+  }
+  .house-scroll-enabled .house-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 0;
+  }
+  .property-portal {
+    height: 270svh;
+  }
+  .portal-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 0;
+  }
+  .destination-story {
+    height: 350svh;
+  }
+  .destination-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    min-height: 0;
+  }
+  .destination-scene {
+    visibility: hidden;
+    opacity: 0;
+  }
+  .destination-scene:first-of-type {
+    visibility: visible;
+    opacity: 1;
+  }
+  .gallery-can-scroll .gallery-stage {
+    position: sticky;
+    top: 0;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .gallery-can-scroll .reel-card .card-image {
+    height: clamp(180px, 33svh, 350px);
+  }
+  .gallery-can-scroll .reel-number {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+  .gallery-can-scroll .gallery-reel-label {
+    padding: 12px 0 16px;
+  }
+  .gallery-can-scroll .reel-progress {
+    margin-top: 22px;
+  }
+}
+@media (max-width: 800px) {
+  .cinematic-home .featured,
+  .cinematic-home .why {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+  .gallery-stage {
+    padding-top: 0;
+  }
+}
+@media (max-width: 600px) {
+  .cinematic-home .cinema-hero {
+    min-height: 780px;
+    margin-bottom: 0;
+  }
+  .cinematic-home .cinema-hero .search-bar {
+    bottom: 22px;
+  }
+  .cinematic-home .cinema-scroll {
+    bottom: 255px;
+  }
+  .cinematic-home .cinema-location {
+    display: none;
+  }
+  .cinematic-home .hero-editorial {
+    top: 7%;
+  }
+  .cinematic-home .hero-description {
+    font-size: 11px;
+  }
+}

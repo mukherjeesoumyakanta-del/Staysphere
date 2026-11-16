@@ -30,7 +30,14 @@ export default function ScrollDrivenHouse() {
     />
   );
   return (
-    <section ref={root} id="architecture" className="house-scroll">
+    <section
+      ref={root}
+      id="architecture"
+      className={
+        "house-scroll" +
+        (supported && !reduced && near ? " house-scroll-enabled" : "")
+      }
+    >
       <div ref={panel} className="house-stage">
         <div className="house-heading">
           <span className="eyebrow">02 — A CHANGE OF PERSPECTIVE</span>

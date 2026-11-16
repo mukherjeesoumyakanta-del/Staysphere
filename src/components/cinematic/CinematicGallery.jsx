@@ -15,14 +15,17 @@ export default function CinematicGallery({ properties }) {
         const ctx = gsap.context(() => {
           const distance = () =>
             Math.max(0, track.current.scrollWidth - root.current.clientWidth);
+          const setHeight = () =>
+            gsap.set(root.current, { height: innerHeight + distance() });
+          setHeight();
           const animation = gsap.to(track.current, {
             x: () => -distance(),
             ease: "none",
             scrollTrigger: {
               trigger: root.current,
-              start: "center center",
-              end: () => "+=" + Math.max(innerHeight, distance()),
-              pin: true,
+              start: "top top",
+              end: "bottom bottom",
+              onRefreshInit: setHeight,
               scrub: 0.8,
               invalidateOnRefresh: true,
               onUpdate: (self) => {
@@ -57,7 +60,10 @@ export default function CinematicGallery({ properties }) {
   }, [signature]);
   return (
     <div
-      className="cinematic-gallery"
+      className={
+        "cinematic-gallery" +
+        (properties.length >= 3 ? " gallery-can-scroll" : "")
+      }
       ref={root}
       onFocusCapture={(e) => {
         const st = trigger.current,
@@ -73,30 +79,32 @@ export default function CinematicGallery({ properties }) {
         }
       }}
     >
-      <div className="gallery-reel-label">
-        <span>A COLLECTION OF POSSIBILITIES</span>
-        <span>SCROLL TO EXPLORE ↗</span>
-      </div>
-      {properties.length ? (
-        <div ref={track} className="gallery-track">
-          {properties.map((p, i) => (
-            <div key={p.id} className="reel-card">
-              <span className="reel-number">
-                {String(i + 1).padStart(2, "0")}
-                <i> / THE STAYSPHERE COLLECTION</i>
-              </span>
-              <PropertyCard property={p} />
-            </div>
-          ))}
+      <div className="gallery-stage">
+        <div className="gallery-reel-label">
+          <span>A COLLECTION OF POSSIBILITIES</span>
+          <span>SCROLL TO EXPLORE ↗</span>
         </div>
-      ) : (
-        <Empty
-          title="More spaces are on their way"
-          text="Try another collection."
-        />
-      )}
-      <div className="reel-progress">
-        <i />
+        {properties.length ? (
+          <div ref={track} className="gallery-track">
+            {properties.map((p, i) => (
+              <div key={p.id} className="reel-card">
+                <span className="reel-number">
+                  {String(i + 1).padStart(2, "0")}
+                  <i> / THE STAYSPHERE COLLECTION</i>
+                </span>
+                <PropertyCard property={p} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            title="More spaces are on their way"
+            text="Try another collection."
+          />
+        )}
+        <div className="reel-progress">
+          <i />
+        </div>
       </div>
     </div>
   );

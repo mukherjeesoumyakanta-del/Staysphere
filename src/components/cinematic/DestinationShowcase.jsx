@@ -43,8 +43,7 @@ export default function DestinationShowcase() {
             scrollTrigger: {
               trigger: root.current,
               start: "top top",
-              end: () => "+=" + innerHeight * 2.5,
-              pin: stage.current,
+              end: "bottom bottom",
               scrub: 1,
               invalidateOnRefresh: true,
             },
@@ -115,7 +114,7 @@ export default function DestinationShowcase() {
               </h2>
               <p>{desc}</p>
               <Link to={"/explore?q=" + name}>
-                Explore {name}
+                Explore stays
                 <ArrowUpRight size={19} />
               </Link>
             </div>

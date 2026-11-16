@@ -157,10 +157,8 @@ function World({ section, panel }) {
             scrollTrigger: {
               trigger: section.current,
               start: desktop ? "top top" : "top 65%",
-              end: () => "+=" + innerHeight * (desktop ? 2.8 : 1.15),
-              pin: desktop ? panel.current : false,
+              end: desktop ? "bottom bottom" : () => "+=" + innerHeight * 1.15,
               scrub: 1,
-              anticipatePin: 1,
               invalidateOnRefresh: true,
             },
           });
