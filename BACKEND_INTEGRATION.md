@@ -1,6 +1,6 @@
 # Backend integration contract
 
-The current application is entirely client-side. Replace implementations in `src/services/index.js`; presentation code should consume the same `{data: ...}` promise responses. Reject errors with a useful `.message`. Use `VITE_API_BASE_URL` (default `/api`) in a centralized Fetch client with `credentials: 'include'`. Add real network loading/error handling to every mutating screen when migrating.
+Task 1 adds the Express skeleton under `server/` with `GET /api/health`. All product workflows are still client-side; database persistence and real auth are not yet implemented. Replace implementations in `src/services/index.js`; presentation code should consume the same `{data: ...}` promise responses. Reject errors with a useful `.message`. Use `VITE_API_BASE_URL` (default `/api`) in a centralized Fetch client with `credentials: 'include'`. Add real network loading/error handling to every mutating screen when migrating.
 
 ## Planned endpoints
 

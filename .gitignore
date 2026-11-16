@@ -1,4 +1,19 @@
+# Dependencies and generated output at any depth
 node_modules/
 dist/
+build/
+coverage/
+.vite/
+.vercel/
+
+# Local environment files; only blank templates belong in Git
 .env
+.env.*
+!.env.example
+*.local
+
+# Logs, uploads, and temporary artifacts
+*.log
+uploads/
 *.tar.gz
+.DS_Store

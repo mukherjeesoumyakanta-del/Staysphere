@@ -1,22 +1,44 @@
 # StaySphere
 
-A React + Vite property discovery and management frontend, written in JavaScript/JSX. No backend is included.
+A React + Vite property discovery and management frontend with a modular Express API foundation. The UI remains mock-backed in Task 1; the server currently exposes a liveness endpoint only.
 
 ## Run locally
 
-Requires Node.js 20.19+ (Node 22 LTS recommended).
+Use Node.js 22 LTS or newer. Keep the existing frontend at the repository root and the API in `server/`; no client move is necessary.
 
 ```sh
-npm install
-npm run dev
+npm ci
+npm run install:server
+cp .env.example .env
+cp server/.env.example server/.env
 ```
+
+The blank templates contain variable names only. Defaults work locally without secrets: API port 5000 and frontend origin http://localhost:5173. In separate terminals:
 
 ```sh
-npm test
-npm run build
+npm run dev:client
+npm run dev:server
 ```
 
-Deploy the `dist` directory to a static host with SPA fallback to `index.html`. Vite supports direct-route refresh in development. Sites static hosting uses its SPA fallback.
+`npm run dev` is still the original frontend command. Vite proxies `/api` to http://127.0.0.1:5000; if you change the API port, update that development proxy too. The current UI deliberately continues using mock services until later tasks.
+
+```sh
+curl -i http://localhost:5000/api/health
+npm test                 # frontend + backend suites
+npm run build           # frontend production build
+npm --prefix server run check
+npm run start:server    # production-style API start
+```
+
+Health responds HTTP 200 with `{ "data": { "status": "ok", "service": "staysphere-api" } }`. It checks HTTP liveness, not MongoDB connectivity. An app factory is separate from the listener for testing. The API uses Helmet, credential-aware origin allowlisting, request rate limiting, a 100 KB JSON limit, cookie parsing, and centralized sanitized errors. No login, database, uploads, or AI endpoints exist yet.
+
+## Deployment preparation
+
+**Render API:** use `render.yaml` as a Blueprint, or create a Node web service with root directory `server`, build command `npm ci --omit=dev`, start command `npm start`, and health path `/api/health`. Set `NODE_ENV=production` and `CLIENT_ORIGIN` to the exact frontend origin, for example your Vercel HTTPS origin, without a trailing slash. Multiple approved origins may be comma-separated. Render supplies `PORT`; the server listens on `0.0.0.0` and shuts down gracefully on SIGTERM. No external database credential is needed for Task 1 health.
+
+**Vercel frontend:** import the verified GitHub repo, choose Vite, keep root directory at repository root, build with `npm run build`, and publish `dist`. `vercel.json` provides SPA routing for direct route refresh. In later tasks, set public `VITE_API_BASE_URL` to the Render API origin plus `/api`; never use VITE-prefixed variables for secrets. Existing Sites hosting is preserved in `.openai/hosting.json` and is separate from Render/Vercel. This task does not provision or deploy external infrastructure.
+
+Cross-site HTTP-only cookie attributes, CSRF protection, and production domain choices must be finalized when real authentication is added. All frontend role guards and credentials below are currently demo-only.
 
 ## Demo accounts
 
