@@ -2,8 +2,11 @@ import mongoose from "mongoose";
 
 const VALID_AMENITIES = [
   "WiFi",
+  "Wi-Fi",
   "Pool",
+  "Swimming pool",
   "AC",
+  "Air conditioning",
   "Kitchen",
   "Parking",
   "Gym",
@@ -11,6 +14,7 @@ const VALID_AMENITIES = [
   "Pet Friendly",
   "Breakfast",
   "Hot Tub",
+  "Mountain view",
 ];
 
 const imageSchema = new mongoose.Schema(
@@ -72,6 +76,7 @@ const listingSchema = new mongoose.Schema(
         "Farmhouse",
         "Treehouse",
         "Houseboat",
+        "Homestay",
       ],
       required: true,
     },

@@ -235,6 +235,13 @@ export function ListingTable({ items, onRefresh }) {
               </b>
               <div className="row-actions">
                 <Link
+                  aria-label={"View " + p.name}
+                  to={"/property/" + p.id}
+                  target="_blank"
+                >
+                  <Eye size={17} />
+                </Link>
+                <Link
                   aria-label={"Edit " + p.name}
                   to={"/host/listings/" + p.id + "/edit"}
                 >

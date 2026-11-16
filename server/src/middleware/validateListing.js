@@ -7,12 +7,16 @@ const VALID_PROPERTY_TYPES = [
   "Farmhouse",
   "Treehouse",
   "Houseboat",
+  "Homestay",
 ];
 
 const VALID_AMENITIES = [
   "WiFi",
+  "Wi-Fi",
   "Pool",
+  "Swimming pool",
   "AC",
+  "Air conditioning",
   "Kitchen",
   "Parking",
   "Gym",
@@ -20,6 +24,7 @@ const VALID_AMENITIES = [
   "Pet Friendly",
   "Breakfast",
   "Hot Tub",
+  "Mountain view",
 ];
 
 const KNOWN_FIELDS = [
@@ -160,19 +165,21 @@ function validateFields(body, isCreate) {
     if (typeof list === "string") {
       list = list.includes(",")
         ? list.split(",").map((s) => s.trim()).filter(Boolean)
-        : [list];
+        : [list.trim()];
     }
     if (!Array.isArray(list)) {
-      fields.amenities = "amenities must be an array";
+      list = [list];
+    }
+    list = list.filter((a) => typeof a === "string" && a.trim().length > 0);
+    const invalid = list.filter(
+      (a) => !VALID_AMENITIES.some((v) => v.toLowerCase() === a.toLowerCase())
+    );
+    if (invalid.length > 0) {
+      fields.amenities = `Invalid amenities: ${invalid.join(", ")}`;
     } else {
-      const invalid = list.filter(
-        (a) => !VALID_AMENITIES.includes(a)
+      validated.amenities = list.map(
+        (a) => VALID_AMENITIES.find((v) => v.toLowerCase() === a.toLowerCase()) || a
       );
-      if (invalid.length > 0) {
-        fields.amenities = `Invalid amenities: ${invalid.join(", ")}`;
-      } else {
-        validated.amenities = list;
-      }
     }
   }
 

@@ -56,7 +56,14 @@ function PropertyDetailSkeleton() {
 
 export default function Property() {
   const { id } = useParams();
-  const { favorites, refresh, mutate, toggleFavorite } = useStore();
+  const {
+    listings: storeListings = [],
+    favorites = [],
+    refresh,
+    mutate,
+    toggleFavorite,
+    user,
+  } = useStore();
 
   const [p, setP] = useState(null);
   const [blocks, setBlocks] = useState([]);
@@ -74,23 +81,24 @@ export default function Property() {
       .getListingById(id)
       .then((result) => {
         const listing = result.data;
-        if (!listing || listing.status !== "active") {
+        if (!listing) {
           setNotFound(true);
         } else {
           setP(listing);
-          // Record recent view in local state
-          mutate(
-            (s) =>
-              (s.recent = [id, ...s.recent.filter((x) => x !== id)].slice(0, 8)),
-          );
+          // Record recent view in local state if active
+          if (listing.status === "active" && mutate) {
+            mutate(
+              (s) =>
+                (s.recent = [id, ...s.recent.filter((x) => x !== id)].slice(
+                  0,
+                  8
+                ))
+            );
+          }
         }
       })
       .catch((e) => {
-        if (e.status === 404 || e.code === "REQUEST_FAILED") {
-          setNotFound(true);
-        } else {
-          setNotFound(true);
-        }
+        setNotFound(true);
       })
       .finally(() => setLoading(false));
 
@@ -98,7 +106,7 @@ export default function Property() {
       .getBlocks(id)
       .then((b) => setBlocks(b))
       .catch(() => setBlocks([]));
-  }, [id]);
+  }, [id, mutate]);
 
   useEffect(() => {
     if (gallery === null || !p) return;
@@ -125,8 +133,10 @@ export default function Property() {
     );
 
   // Similar listings: from the store (may be API or mock), exclude current
-  const similar = storeListings
-    .filter((x) => x.id !== id && x.status === "active")
+  const similar = (storeListings || [])
+    .filter(
+      (x) => x.id !== id && (x.status === "active" || x.status === "ACTIVE")
+    )
     .slice(0, 3);
 
   return (
@@ -135,6 +145,28 @@ export default function Property() {
         <ArrowLeft size={16} />
         Back to discovery
       </Link>
+      {p.status === "draft" && (
+        <div
+          className="info-box"
+          style={{
+            marginBottom: "1.5rem",
+            border: "1px solid #f59e0b",
+            background: "#fffbeb",
+            color: "#92400e",
+            borderRadius: "8px",
+            padding: "1rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          <Info size={20} color="#d97706" />
+          <p style={{ margin: 0 }}>
+            <strong>Draft Listing:</strong> This space is currently a draft and
+            does not appear in public search.
+          </p>
+        </div>
+      )}
       <div className="detail-title">
         <div>
           <span className="eyebrow">
@@ -202,7 +234,7 @@ export default function Property() {
             <h2>A little about this space</h2>
             <p>{p.description}</p>
           </section>
-          {p.amenities.length > 0 && (
+          {p.amenities && p.amenities.length > 0 && (
             <section className="detail-section">
               <h2>Thoughtful little comforts</h2>
               <div className="amenity-grid">
