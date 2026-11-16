@@ -110,8 +110,23 @@ function validateFields(body, isCreate) {
 
   // String fields
   if (isCreate || body.title !== undefined) requireString("title", 3, 120);
-  if (isCreate || body.description !== undefined)
-    requireString("description", 10, 2000);
+  if (isCreate || body.description !== undefined) {
+    if (body.status === "DRAFT") {
+      const desc =
+        typeof body.description === "string" ? body.description.trim() : "";
+      if (!desc || desc.length < 10) {
+        validated.description = desc
+          ? `${desc} (draft listing)`
+          : "Draft property listing in progress.";
+      } else if (desc.length > 2000) {
+        fields.description = "description must be at most 2000 characters";
+      } else {
+        validated.description = desc;
+      }
+    } else {
+      requireString("description", 10, 2000);
+    }
+  }
   if (isCreate || body.city !== undefined) requireString("city", 2, 80);
   if (isCreate || body.state !== undefined) requireString("state", 2, 80);
   if (isCreate || body.location !== undefined)

@@ -3,6 +3,8 @@ import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { authRoutes } from "./routes/authRoutes.js";
 import { listingRoutes } from "./routes/listingRoutes.js";
 import { availabilityRoutes } from "./routes/availabilityRoutes.js";
@@ -11,6 +13,7 @@ import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
 import { getConfig } from "./config/env.js";
+import { uploadsDir } from "./config/cloudinary.js";
 
 export function createApp(
   config = getConfig(),
@@ -55,6 +58,7 @@ export function createApp(
   );
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
+  app.use("/uploads", express.static(uploadsDir));
   app.use("/api/auth", authRoutes(config, users));
   app.use("/api", listingRoutes(config, { users, listings }));
   app.use(

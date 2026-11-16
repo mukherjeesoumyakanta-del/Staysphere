@@ -207,8 +207,11 @@ async function _multipartRequest(method, path, formData) {
     throw new Error("The server returned an unexpected response.");
   }
   if (!response.ok) {
+    const fieldDetails = result?.error?.fields
+      ? Object.values(result.error.fields).join(", ")
+      : "";
     throw new Error(
-      result?.error?.message || "The request failed. Please try again.",
+      fieldDetails || result?.error?.message || "The request failed. Please try again.",
     );
   }
   return { data: result.data ? normalizeListing(result.data) : result.data };

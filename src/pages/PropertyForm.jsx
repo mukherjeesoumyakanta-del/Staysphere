@@ -82,6 +82,7 @@ export default function PropertyForm() {
 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitAction, setSubmitAction] = useState("DRAFT");
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [drag, setDrag] = useState(false);
@@ -182,30 +183,52 @@ export default function PropertyForm() {
     setBusy(true);
     setError("");
     try {
-      const submittedStatus =
-        (e.nativeEvent.submitter?.value || "DRAFT").toUpperCase();
-      if (
-        submittedStatus === "ACTIVE" &&
-        totalImages === 0 &&
-        !f.description.trim()
-      )
-        throw Error("Add at least one image and a description before publishing.");
+      const submittedStatus = (
+        submitAction ||
+        e.nativeEvent?.submitter?.value ||
+        "DRAFT"
+      ).toUpperCase();
+
       if (!f.title.trim()) throw Error("Property title is required.");
+      if (f.title.trim().length < 3)
+        throw Error("Property title must be at least 3 characters.");
+      if (!f.pricePerNight || Number(f.pricePerNight) < 1)
+        throw Error("Nightly price must be at least ₹1.");
       if (!f.city.trim() && !f.location.trim())
         throw Error("City or location is required.");
 
+      if (submittedStatus === "ACTIVE") {
+        if (totalImages === 0)
+          throw Error("Add at least one image before publishing.");
+        if (!f.description || f.description.trim().length < 10)
+          throw Error(
+            "Please provide a description of at least 10 characters before publishing."
+          );
+      }
+
+      const derivedCity =
+        f.city.trim() || f.location.split(",")[0]?.trim() || "Assagao";
+      const derivedState =
+        f.state.trim() || f.location.split(",")[1]?.trim() || derivedCity;
+
       const fields = {
-        title: f.title,
-        city: f.city || f.location.split(",")[0]?.trim() || "",
-        state: f.state || f.location.split(",")[1]?.trim() || "",
-        location: f.location || [f.city, f.state].filter(Boolean).join(", "),
+        title: f.title.trim(),
+        city: derivedCity,
+        state: derivedState,
+        location:
+          f.location.trim() ||
+          [derivedCity, derivedState].filter(Boolean).join(", "),
         propertyType: f.propertyType,
-        bedrooms: f.bedrooms,
-        bathrooms: f.bathrooms,
-        maxGuests: f.maxGuests,
-        pricePerNight: f.pricePerNight,
+        bedrooms: Math.max(0, parseInt(f.bedrooms, 10) || 0),
+        bathrooms: Math.max(0, parseFloat(f.bathrooms) || 1),
+        maxGuests: Math.max(1, parseInt(f.maxGuests, 10) || 1),
+        pricePerNight: Math.round(Number(f.pricePerNight)),
         amenities: f.amenities,
-        description: f.description,
+        description:
+          f.description.trim() ||
+          (submittedStatus === "DRAFT"
+            ? "Draft property listing in progress."
+            : ""),
         status: submittedStatus,
       };
       if (f.highlights) fields.highlights = f.highlights;
@@ -470,18 +493,24 @@ export default function PropertyForm() {
               name="status"
               value="DRAFT"
               type="submit"
+              onClick={() => setSubmitAction("DRAFT")}
               disabled={busy || uploading}
             >
-              {busy ? <LoaderCircle className="spin" size={16} /> : null}
+              {busy && submitAction === "DRAFT" ? (
+                <LoaderCircle className="spin" size={16} />
+              ) : null}
               Save draft
             </Button>
             <Button
               name="status"
               value="ACTIVE"
               type="submit"
+              onClick={() => setSubmitAction("ACTIVE")}
               disabled={busy || uploading}
             >
-              {busy ? <LoaderCircle className="spin" size={16} /> : null}
+              {busy && submitAction === "ACTIVE" ? (
+                <LoaderCircle className="spin" size={16} />
+              ) : null}
               Publish listing
               <ArrowLeft className="rotate" size={16} />
             </Button>

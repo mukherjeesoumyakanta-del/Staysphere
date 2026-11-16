@@ -57,12 +57,16 @@ export async function apiRequest(
       "INVALID_RESPONSE",
     );
   }
-  if (!response.ok)
+  if (!response.ok) {
+    const fieldMsg = result.error?.fields
+      ? Object.values(result.error.fields).join(", ")
+      : "";
     throw new ApiError(
-      result.error?.message || "The request failed. Please try again.",
+      fieldMsg || result.error?.message || "The request failed. Please try again.",
       response.status,
       result.error?.code || "REQUEST_FAILED",
     );
+  }
   if (!Object.hasOwn(result, "data"))
     throw new ApiError(
       "The account service returned an unexpected response.",
