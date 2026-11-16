@@ -52,7 +52,7 @@ export default function DestinationShowcase() {
           scenes.forEach((scene, i) => {
             tl.fromTo(
               scene.querySelector("img"),
-              { scale: 1.1 },
+              { scale: 1.25 },
               { scale: 1, duration: 1.3 },
               i,
             );
@@ -60,14 +60,25 @@ export default function DestinationShowcase() {
               tl.to(scenes[i - 1], { autoAlpha: 0, duration: 0.5 }, i);
               tl.fromTo(
                 scene,
-                { autoAlpha: 0, clipPath: "inset(0 0 0 25%)" },
-                { autoAlpha: 1, clipPath: "inset(0 0 0 0%)", duration: 0.6 },
+                { autoAlpha: 0, clipPath: "inset(0 0 0 100%)" },
+                { autoAlpha: 1, clipPath: "inset(0 0 0 0%)", duration: 0.85 },
+                i,
+              );
+              tl.fromTo(
+                scene.querySelector("h2"),
+                { x: 140, rotate: -4, scale: 1.15 },
+                { x: 0, rotate: 0, scale: 1, duration: 0.9 },
+                i,
+              );
+              tl.to(
+                scenes[i - 1].querySelector("img"),
+                { xPercent: -12, scale: 1.15, duration: 0.8 },
                 i,
               );
               tl.fromTo(
                 scene.querySelector(".destination-copy"),
                 { y: 35 },
-                { y: 0, duration: 0.6 },
+                { y: 0, duration: 0.85 },
                 i,
               );
             }

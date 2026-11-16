@@ -17,6 +17,7 @@ import { useStore } from "../context/Store";
 import { PropertyGrid, Reveal } from "../components/UI";
 import CinematicHero from "../components/cinematic/CinematicHero";
 import ScrollDrivenHouse from "../components/cinematic/ScrollDrivenHouse";
+import CinematicGallery from "../components/cinematic/CinematicGallery";
 import PropertyReveal from "../components/cinematic/PropertyReveal";
 import DestinationShowcase from "../components/cinematic/DestinationShowcase";
 import CinematicAISection from "../components/cinematic/CinematicAISection";
@@ -83,9 +84,7 @@ export default function Home() {
               ))}
             </div>
           </Reveal>
-          <Reveal>
-            <PropertyGrid properties={featured} />
-          </Reveal>
+          <CinematicGallery properties={featured} />
         </section>
         <DestinationShowcase />
         <CinematicAISection />{" "}

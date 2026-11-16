@@ -25,7 +25,8 @@ export default function CinematicHero() {
       const ctx = gsap.context(() => {
         gsap.from(".hero-line>span", {
           yPercent: 110,
-          rotate: 2,
+          rotateX: -65,
+          transformOrigin: "50% 100%",
           opacity: 0,
           duration: 1.3,
           stagger: 0.16,
@@ -39,7 +40,7 @@ export default function CinematicHero() {
           stagger: 0.12,
         });
         gsap.to(".cinema-media", {
-          scale: 1.12,
+          scale: 1.3,
           yPercent: 14,
           ease: "none",
           scrollTrigger: {
@@ -50,8 +51,9 @@ export default function CinematicHero() {
           },
         });
         gsap.to(".hero-editorial", {
-          y: 100,
-          opacity: 0.15,
+          y: -90,
+          scale: 0.93,
+          opacity: 0,
           ease: "none",
           scrollTrigger: {
             trigger: root.current,
@@ -60,6 +62,26 @@ export default function CinematicHero() {
             scrub: 1,
           },
         });
+        gsap.to(".hero-film-word", {
+          xPercent: -24,
+          letterSpacing: "-.04em",
+          ease: "none",
+          scrollTrigger: {
+            trigger: root.current,
+            start: "top top",
+            end: "bottom top",
+            scrub: 0.7,
+          },
+        });
+        gsap.fromTo(
+          ".hero-aperture",
+          { clipPath: "inset(0% 0% 0% 0%)" },
+          {
+            clipPath: "inset(50% 0% 50% 0%)",
+            ease: "power2.inOut",
+            duration: 1.4,
+          },
+        );
       }, root);
       return () => ctx.revert();
     });
@@ -72,6 +94,13 @@ export default function CinematicHero() {
       </div>
       <div className="cinema-vignette" />
       <div className="cinema-grain" />
+      <div className="hero-aperture" aria-hidden="true" />
+      <span className="hero-film-word" aria-hidden="true">
+        STAYSPHERE
+      </span>
+      <span className="hero-film-edition">
+        AN EXPLORATION OF SPACE & FEELING — VOL. 01
+      </span>
       <div className="hero-editorial">
         <div className="hero-kicker">
           <span />

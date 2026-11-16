@@ -129,7 +129,8 @@ function Villa() {
   );
 }
 function World({ section, panel }) {
-  const group = useRef();
+  const group = useRef(),
+    keyLight = useRef();
   const { camera, invalidate } = useThree();
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
@@ -188,6 +189,15 @@ function World({ section, panel }) {
               73,
             )
             .to(".house-progress i", { scaleX: 1, duration: 100 }, 0);
+          tl.to(keyLight.current, { intensity: 1.1, duration: 35 }, 40)
+            .to(
+              keyLight.current.color,
+              { r: 1, g: 0.7, b: 0.4, duration: 35 },
+              40,
+            )
+            .to(camera.position, { y: 3.4, duration: 15 }, 55)
+            .to(keyLight.current, { intensity: 3, duration: 20 }, 80)
+            .to(keyLight.current.color, { r: 1, g: 1, b: 1, duration: 20 }, 80);
           ScrollTrigger.refresh();
         }, panel.current);
         return () => ctx.revert();
@@ -199,7 +209,7 @@ function World({ section, panel }) {
     <>
       <ambientLight intensity={1.5} />
       <hemisphereLight args={["#fff7e3", "#42654b", 1.6]} />
-      <directionalLight position={[5, 10, 6]} intensity={3} />
+      <directionalLight ref={keyLight} position={[5, 10, 6]} intensity={3} />
       <directionalLight
         position={[-4, 4, -3]}
         intensity={1.2}

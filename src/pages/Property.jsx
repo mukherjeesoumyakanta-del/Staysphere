@@ -89,7 +89,13 @@ export default function Property() {
             onClick={() => setGallery(i)}
             aria-label={"Enlarge property image " + (i + 1)}
           >
-            <img src={img} alt={p.name + " — view " + (i + 1)} />
+            <img
+              src={img}
+              alt={p.name + " — view " + (i + 1)}
+              style={
+                i === 0 ? { viewTransitionName: "property-" + p.id } : undefined
+              }
+            />
             {i === 2 && <span>View all photos</span>}
           </button>
         ))}

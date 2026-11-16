@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { flushSync } from "react-dom";
 import {
   Heart,
   ArrowUpRight,
@@ -56,6 +57,36 @@ export function Reveal({ children, className = "" }) {
 }
 export function PropertyCard({ property: p }) {
   const { favorites, refresh } = useStore();
+  const navigate = useNavigate(),
+    { pathname } = useLocation();
+  const shared = pathname === "/" || pathname === "/explore";
+  const openProperty = (e) => {
+    if (
+      !shared ||
+      !document.startViewTransition ||
+      reduced ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.shiftKey ||
+      e.altKey ||
+      e.button !== 0
+    )
+      return;
+    e.preventDefault();
+    document.documentElement.classList.add("property-view-transition");
+    const transition = document.startViewTransition(async () => {
+      await import("../pages/Property");
+      flushSync(() => navigate("/property/" + p.id));
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+    });
+    transition.finished
+      .catch(() => {})
+      .finally(() =>
+        document.documentElement.classList.remove("property-view-transition"),
+      );
+  };
   const reduced = useReducedMotion();
   const x = useMotionValue(0),
     y = useMotionValue(0);
@@ -83,10 +114,17 @@ export function PropertyCard({ property: p }) {
       }}
       whileHover={reduced ? {} : { y: -5 }}
     >
-      <Link to={"/property/" + p.id} className="card-image">
+      <Link
+        to={"/property/" + p.id}
+        className="card-image"
+        onClick={openProperty}
+      >
         <img
           loading="lazy"
           src={p.images[0]}
+          style={
+            shared ? { viewTransitionName: "property-" + p.id } : undefined
+          }
           alt={p.name + " in " + p.location}
         />
         <span className="card-tag">{p.type}</span>
