@@ -10,6 +10,7 @@ import { listingRoutes } from "./routes/listingRoutes.js";
 import { availabilityRoutes } from "./routes/availabilityRoutes.js";
 import { favoriteRoutes } from "./routes/favoriteRoutes.js";
 import { bookingRoutes } from "./routes/bookingRoutes.js";
+import { aiRoutes } from "./routes/aiRoutes.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
@@ -85,6 +86,13 @@ export function createApp(
       users,
       listings,
       bookingRepo,
+    })
+  );
+  app.use(
+    "/api",
+    aiRoutes(config, {
+      users,
+      listings,
     })
   );
   app.use("/api", apiRoutes);

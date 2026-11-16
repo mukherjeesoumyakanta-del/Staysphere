@@ -482,7 +482,7 @@ export function AIFinder() {
           <h2>A little detail goes a long way.</h2>
           <p>Tell me where, who’s coming, and what makes a stay feel right.</p>
           <span className="demo-label">
-            MOCK AI · GROUNDED IN 12 DEMO PROPERTIES
+            AI POWERED SEARCH · GROUNDED IN REAL PROPERTIES
           </span>
         </div>
         <div className="prompt-chips">
@@ -521,8 +521,8 @@ export function AIFinder() {
           </Button>
         </form>
         <small>
-          Demo search extracts known destinations, budgets, guests, property
-          types, and amenities. No live LLM.
+          AI searches real active listings by destination, budget, capacity,
+          property type, and amenities.
         </small>
       </div>
       {last && (
@@ -548,9 +548,14 @@ export function AIFinder() {
             <div>
               <span className="eyebrow">YOUR WISH LIST, UNDERSTOOD</span>
               <h2>
-                {result.properties.length} places to{" "}
+                {result.properties.length} place{result.properties.length === 1 ? "" : "s"} to{" "}
                 <span>picture yourself.</span>
               </h2>
+              {result.explanation && (
+                <p className="muted" style={{ marginTop: "0.25rem" }}>
+                  {result.explanation}
+                </p>
+              )}
             </div>
           </div>
           <div className="filter-chips">
@@ -559,12 +564,22 @@ export function AIFinder() {
               .map(([k, v]) => (
                 <span key={k}>
                   <Check size={13} />
-                  {k === "q" ? "Destination" : k}:{" "}
-                  {Array.isArray(v) ? v.join(", ") : k === "max" ? "₹" + v : v}
+                  {k === "q" || k === "city" ? "Destination" : k}:{" "}
+                  {Array.isArray(v)
+                    ? v.join(", ")
+                    : k === "max" || k === "maxPrice"
+                    ? "₹" + Number(v).toLocaleString("en-IN")
+                    : v}
                 </span>
               ))}
           </div>
-          <PropertyGrid properties={result.properties} />
+          {result.properties.length === 0 ? (
+            <div className="info-box" style={{ margin: "1.5rem 0" }}>
+              <p>{result.explanation || "No active properties matched your criteria. Try expanding your budget or destination."}</p>
+            </div>
+          ) : (
+            <PropertyGrid properties={result.properties} />
+          )}
         </div>
       )}
     </div>

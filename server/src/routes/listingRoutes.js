@@ -23,9 +23,13 @@ export function listingRoutes(config, { users, listings } = {}) {
       const listing = await service.getOne(req.params.id);
       // Increment viewCount asynchronously if ACTIVE (don't await, best-effort)
       if (listing && listing.status === "ACTIVE") {
-        listingRepo
-          .update(req.params.id, { viewCount: (listing.viewCount || 0) + 1 })
-          .catch(() => {});
+        if (typeof listingRepo.incrementViewCount === "function") {
+          listingRepo.incrementViewCount(req.params.id).catch(() => {});
+        } else if (typeof listingRepo.update === "function") {
+          listingRepo
+            .update(req.params.id, { viewCount: (listing.viewCount || 0) + 1 })
+            .catch(() => {});
+        }
       }
       res.json({ data: listing });
     } catch (error) {

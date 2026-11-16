@@ -2,12 +2,15 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
 
 export function loadEnvironment() {
-  const result = dotenv.config({
+  // Load server/.env first, then root .env if present
+  dotenv.config({
     path: fileURLToPath(new URL("../../.env", import.meta.url)),
     quiet: true,
   });
-  if (result.error && result.error.code !== "ENOENT")
-    throw new Error("Unable to read server environment configuration");
+  dotenv.config({
+    path: fileURLToPath(new URL("../../../.env", import.meta.url)),
+    quiet: true,
+  });
 }
 
 export function getConfig(env = process.env) {
@@ -58,5 +61,10 @@ export function getConfig(env = process.env) {
     mongoUri: env.MONGO_URI || "",
     jwtSecret,
     jwtTtlSeconds: 7 * 24 * 60 * 60,
+    aiApiKey: env.AI_API_KEY || "",
+    aiModel:
+      env.AI_MODEL ||
+      (env.AI_PROVIDER === "openai" ? "gpt-4o-mini" : "gemini-1.5-flash"),
+    aiProvider: (env.AI_PROVIDER || "gemini").toLowerCase(),
   });
 }

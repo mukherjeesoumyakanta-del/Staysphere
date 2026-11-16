@@ -1,5 +1,6 @@
 import { properties, amenities, types, dateAfter } from "../data/properties.js";
-import { API_BASE_URL } from "./apiClient.js";
+import { API_BASE_URL, apiRequest } from "./apiClient.js";
+import { normalizeListing } from "./listingApiService.js";
 export const config = { apiBaseUrl: API_BASE_URL, mockListings: true };
 let memory;
 const key = "staysphere-v1";
@@ -117,7 +118,33 @@ export const availabilityService = {
 };
 export const aiService = {
   async findPropertiesFromPrompt(prompt) {
-    await delay(850);
+    if (!prompt || !prompt.trim()) {
+      throw Error("Try including a destination, budget, property type, or amenity.");
+    }
+
+    try {
+      const res = await apiRequest("/ai/search", {
+        method: "POST",
+        body: { prompt: prompt.trim() },
+      });
+      if (res?.data) {
+        const rawListings = res.data.listings || [];
+        const normalized = rawListings.map(normalizeListing);
+        return {
+          data: {
+            filters: res.data.filters || {},
+            properties: normalized,
+            explanation: res.data.explanation,
+            provider: res.data.provider,
+          },
+        };
+      }
+    } catch (err) {
+      console.warn("Backend AI search failed, using local search fallback:", err.message);
+    }
+
+    // Local fallback
+    await delay(300);
     const s = prompt.toLowerCase(),
       f = { amenities: [] };
     for (const loc of [
@@ -127,11 +154,14 @@ export const aiService = {
       "Lonavala",
       "Darjeeling",
       "Bengaluru",
+      "Mumbai",
+      "Delhi",
+      "Udaipur",
     ])
       if (s.includes(loc.toLowerCase())) f.q = loc;
     for (const t of types) if (s.includes(t.toLowerCase())) f.type = t;
     const budget = s.match(
-      /(?:under|below|budget|max|less than)\s*(?:₹|rs\.?\s*)?([\d,]+)/,
+      /(?:under|below|budget|max|less than)\s*(?:₹|rs\.?\s*)?([\d,]+)/
     );
     if (budget) f.max = Number(budget[1].replaceAll(",", ""));
     const guests = s.match(/(?:for\s+)?(\d+)\s*(?:guests|people|persons)/);
@@ -145,18 +175,42 @@ export const aiService = {
         f.amenities.push(a);
     if (!f.q && !f.type && !f.max && !f.guests && !f.amenities.length)
       throw Error(
-        "Try including a destination, budget, property type, or amenity.",
+        "Try including a destination, budget, property type, or amenity."
       );
     return {
       data: { filters: f, properties: filterListings(read().listings, f) },
     };
   },
+
   async generateListingDescription(p) {
-    await delay(800);
-    if (!p.name || !p.location)
+    if (!p.name && !p.title)
       throw Error("Add a property title and location first.");
+
+    try {
+      const res = await apiRequest("/ai/description", {
+        method: "POST",
+        body: {
+          title: p.title || p.name,
+          location: p.location || [p.city, p.state].filter(Boolean).join(", "),
+          propertyType: p.propertyType || p.type,
+          bedrooms: p.bedrooms,
+          bathrooms: p.bathrooms,
+          maxGuests: p.maxGuests || p.guests,
+          pricePerNight: p.pricePerNight || p.price,
+          amenities: p.amenities,
+          highlights: p.highlights,
+        },
+      });
+      if (res?.data?.description) {
+        return { data: res.data.description };
+      }
+    } catch (err) {
+      console.warn("Backend AI description failed, using template:", err.message);
+    }
+
+    await delay(300);
     return ok(
-      `Welcome to ${p.name}, a ${p.type.toLowerCase()} in ${p.location}. With ${p.bedrooms} bedrooms, ${p.bathrooms} bathrooms, and space for ${p.guests} guests, it is a comfortable setting for your next escape.${p.amenities.length ? " Amenities include " + p.amenities.join(", ") + "." : ""}${p.highlights ? " " + p.highlights : ""} Available from ₹${Number(p.price).toLocaleString("en-IN")} per night.`,
+      `Welcome to ${p.name || p.title}, a ${String(p.type || p.propertyType || "villa").toLowerCase()} in ${p.location}. With ${p.bedrooms} bedrooms, ${p.bathrooms} bathrooms, and space for ${p.guests || p.maxGuests} guests, it is a comfortable setting for your next escape.${p.amenities?.length ? " Amenities include " + p.amenities.join(", ") + "." : ""}${p.highlights ? " " + p.highlights : ""} Available from ₹${Number(p.price || p.pricePerNight || 5000).toLocaleString("en-IN")} per night.`
     );
   },
 };

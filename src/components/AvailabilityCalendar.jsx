@@ -1,19 +1,29 @@
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
-const localDate = (s) => new Date(s + "T12:00:00");
+const localDate = (s) => {
+  if (!s) return new Date();
+  if (s instanceof Date) return s;
+  const str = String(s);
+  const dateOnly = str.split("T")[0];
+  const d = new Date(dateOnly + "T12:00:00");
+  return isNaN(d.getTime()) ? new Date() : d;
+};
+
 export default function AvailabilityCalendar({ blocks = [] }) {
-  const booked = blocks
+  const booked = (blocks || [])
     .filter((b) => String(b.reason).toUpperCase() === "BOOKED")
-    .map((b) => ({
-      from: localDate(b.start || b.startDate),
-      to: new Date(localDate(b.end || b.endDate).getTime() - 86400000),
-    }));
-  const blocked = blocks
+    .map((b) => {
+      const from = localDate(b.start || b.startDate);
+      const to = new Date(localDate(b.end || b.endDate).getTime() - 86400000);
+      return { from, to: to >= from ? to : from };
+    });
+  const blocked = (blocks || [])
     .filter((b) => String(b.reason).toUpperCase() !== "BOOKED")
-    .map((b) => ({
-      from: localDate(b.start || b.startDate),
-      to: new Date(localDate(b.end || b.endDate).getTime() - 86400000),
-    }));
+    .map((b) => {
+      const from = localDate(b.start || b.startDate);
+      const to = new Date(localDate(b.end || b.endDate).getTime() - 86400000);
+      return { from, to: to >= from ? to : from };
+    });
   return (
     <div className="availability-calendar">
       <DayPicker

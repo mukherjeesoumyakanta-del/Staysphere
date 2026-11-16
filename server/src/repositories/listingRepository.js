@@ -64,6 +64,11 @@ export const listingRepository = {
     return Listing.findById(id).lean();
   },
 
+  async incrementViewCount(id) {
+    if (!id || !mongoose.isValidObjectId(id)) return null;
+    return Listing.updateOne({ _id: id }, { $inc: { viewCount: 1 } });
+  },
+
   async findByHost(hostId) {
     return Listing.find({ hostId }).sort({ createdAt: -1 }).lean();
   },
@@ -76,7 +81,7 @@ export const listingRepository = {
     return Listing.findByIdAndUpdate(
       id,
       { $set: data },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ).lean();
   },
 
