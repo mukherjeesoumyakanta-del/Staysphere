@@ -103,3 +103,11 @@ Build and service tests are automated. The required `cua_repl.js` browser integr
 ### Editorial motion update
 
 The public film now opens with an aperture cut and perspective typography, then moves through the villa's warm-to-daylight lighting change, a pinned `BE / LONG` typographic zoom-through, and a horizontal property contact sheet. Destinations use full-frame lateral wipes with counter-moving images and kinetic titles. The contact sheet becomes a native swipe gallery on mobile and for reduced motion; keyboard focus reveals offscreen cards on desktop. Clicking a public property image uses the browser View Transitions API for a shared-image transition when supported and falls back to normal navigation elsewhere. All GSAP sequences remain scoped and cleaned up. Services and dashboard code are unchanged. Browser validation remains unavailable in this environment; check the new cuts, horizontal pin/unpin, shared image, touch scrolling, keyboard focus, and reduced-motion mode manually.
+
+### Troubleshoot the Atlas connection safely
+
+Run `npm --prefix server run check:db` after configuring ignored `server/.env`. It prints success only after connection and user index initialization; failures give redacted DNS, authentication, or network guidance without dumping driver errors or secrets.
+
+If SRV lookup fails, verify the exact hostname under Atlas → Connect → Drivers, then check SRV-capable DNS on the actual backend host. A valid public DNS record does not guarantee that this execution environment can resolve it. If DNS works but server selection fails, ensure the cluster is running, add the backend host's outbound IPs in Atlas → Network Access, and allow outbound TLS connections to port 27017. For Render, use the outbound IP information shown for the service. For local development use the local machine's public IP. Re-run the check from the actual host rather than relying on another machine's result.
+
+A signing secret is not a login JWT: the API creates each expiring login token after successful database authentication. Never copy secrets or generated tokens into frontend variables or Git. If a database password has been shared in chat, rotate that user's password in Atlas → Database Access and update the ignored environment / Render secret accordingly.

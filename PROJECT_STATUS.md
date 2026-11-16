@@ -16,7 +16,9 @@
 
 ## External configuration and current blockers
 
-No `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, or server `.env` exists in this environment. No Atlas connection or real database persistence test has been executed. No production authentication deployment is claimed. The previously published static Sites frontend is not the newly configured Render API.
+Ignored `server/.env` is now configured with the user-supplied Atlas URI (database `staysphere`), a locally generated 384-bit JWT signing secret, and localhost development settings. The file is permission-restricted and must never be committed or printed. No production authentication deployment is claimed. The previously published static Sites frontend is not the configured Render API.
+
+Actual Atlas connection attempts failed: the environment's default SRV lookup returned ENOTFOUND, while public DNS-over-HTTPS resolvers returned valid cluster SRV/TXT records. A standard TLS seed-list attempt derived from those records failed with MongoDB server selection/network errors. After the user broadened Atlas IP access, both paths were retried: SRV still failed with ENOTFOUND and all three direct TLS database endpoints returned ECONNREFUSED. This does not verify or reject the supplied password. Check Atlas Network Access for the backend outbound IPs, cluster running state, and outbound port 27017. The original SRV URI is retained in the ignored configuration; DNS workarounds were diagnostic-only. No accounts or application documents were created by these failed attempts. Run `npm --prefix server run check:db` after configuration/network changes; diagnostics redact secret values.
 
 Manual setup:
 
