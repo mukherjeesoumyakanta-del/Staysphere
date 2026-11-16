@@ -3,13 +3,15 @@ import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
+import { authRoutes } from "./routes/authRoutes.js";
 import apiRoutes from "./routes/index.js";
 import { ApiError } from "./utils/ApiError.js";
 import { notFound, errorHandler } from "./middleware/errors.js";
 import { getConfig } from "./config/env.js";
 
-export function createApp(config = getConfig()) {
+export function createApp(config = getConfig(), { users } = {}) {
   const app = express();
+  app.locals.config = config;
   app.disable("x-powered-by");
   // Render terminates TLS at its reverse proxy. Trust exactly one proxy hop.
   if (config.nodeEnv === "production") app.set("trust proxy", 1);
@@ -47,6 +49,7 @@ export function createApp(config = getConfig()) {
   );
   app.use(express.json({ limit: "100kb" }));
   app.use(cookieParser());
+  app.use("/api/auth", authRoutes(config, users));
   app.use("/api", apiRoutes);
   app.use(notFound);
   app.use(errorHandler);

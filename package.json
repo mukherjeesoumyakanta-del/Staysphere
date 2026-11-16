@@ -9,7 +9,7 @@
     "dev:client": "vite --host 0.0.0.0",
     "dev:server": "npm --prefix server run dev",
     "start:server": "npm --prefix server start",
-    "test:client": "node --test src/services/services.test.js",
+    "test:client": "node --test src/services/*.test.js",
     "test:server": "npm --prefix server test",
     "install:server": "npm --prefix server ci"
   },

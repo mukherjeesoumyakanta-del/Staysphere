@@ -1,26 +1,34 @@
 import { properties, amenities, types, dateAfter } from "../data/properties.js";
-export const config = {
-  apiBaseUrl: import.meta.env?.VITE_API_BASE_URL || "/api",
-  mock: true,
-};
+import { API_BASE_URL } from "./apiClient.js";
+export const config = { apiBaseUrl: API_BASE_URL, mockListings: true };
 let memory;
 const key = "staysphere-v1";
 export function read() {
   if (memory) return memory;
   try {
     memory = JSON.parse(localStorage.getItem(key));
-  } catch {}
+    if (memory && ("accounts" in memory || "user" in memory)) {
+      delete memory.accounts;
+      delete memory.user;
+      localStorage.setItem(key, JSON.stringify(memory));
+    }
+  } catch {
+    console.warn(
+      "Unable to restore local demo property data; using a fresh local state.",
+    );
+    memory = null;
+  }
   return (memory ||= {
     listings: structuredClone(properties),
     favorites: [],
     recent: [],
-    user: null,
-    accounts: [],
   });
 }
 export function write(fn) {
   const state = structuredClone(read());
   fn(state);
+  delete state.accounts;
+  delete state.user;
   try {
     localStorage.setItem(key, JSON.stringify(state));
   } catch {
@@ -80,54 +88,7 @@ export function filterListings(items, f = {}) {
           : b.createdAt - a.createdAt,
     );
 }
-export const authService = {
-  async login(email, password) {
-    await delay();
-    const account = read().accounts.find(
-      (a) => a.email === email && a.password === password,
-    );
-    if (
-      !account &&
-      !(
-        ["guest@staysphere.demo", "host@staysphere.demo"].includes(email) &&
-        password === "Demo123!"
-      )
-    )
-      throw Error("Check your demo email and password.");
-    const user = account
-      ? { id: account.id, name: account.name, email, role: account.role }
-      : {
-          id: email.startsWith("host") ? "host-demo" : "guest-demo",
-          name: email.startsWith("host") ? "Arjun" : "Ananya",
-          email,
-          role: email.startsWith("host") ? "HOST" : "GUEST",
-        };
-    write((s) => (s.user = user));
-    return { data: user };
-  },
-  async signup(values) {
-    await delay();
-    if (
-      read().accounts.some((x) => x.email === values.email) ||
-      ["guest@staysphere.demo", "host@staysphere.demo"].includes(values.email)
-    )
-      throw Error("An account with this email already exists.");
-    const a = { ...values, id: crypto.randomUUID() };
-    write((s) => {
-      s.accounts.push(a);
-      s.user = { id: a.id, name: a.name, email: a.email, role: a.role };
-    });
-    return ok(read().user);
-  },
-  logout() {
-    write((s) => (s.user = null));
-    return ok(null);
-  },
-  update: (values) => {
-    write((s) => (s.user = { ...s.user, ...values }));
-    return ok(read().user);
-  },
-};
+export { authService } from "./authService.js";
 export const availabilityService = {
   add(propertyId, range) {
     const p = read().listings.find((x) => x.id === propertyId);

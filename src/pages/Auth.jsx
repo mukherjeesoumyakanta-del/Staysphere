@@ -28,22 +28,18 @@ export default function Auth({ signup = false }) {
     [visible, setVisible] = useState(false),
     [loading, setLoading] = useState(false),
     [error, setError] = useState("");
-  const { refresh } = useStore(),
+  const { refresh, authError } = useStore(),
     navigate = useNavigate(),
     location = useLocation();
   const set = (k, v) => setF({ ...f, [k]: v });
-  async function submit(e, demo) {
+  async function submit(e) {
     e?.preventDefault();
     setLoading(true);
     setError("");
     try {
-      const { data } =
-        signup && !demo
-          ? await authService.signup(f)
-          : await authService.login(
-              demo ? `${demo}@staysphere.demo` : f.email,
-              demo ? "Demo123!" : f.password,
-            );
+      const { data } = signup
+        ? await authService.signup(f)
+        : await authService.login(f.email, f.password);
       refresh();
       const from = location.state?.from;
       navigate(
@@ -91,6 +87,8 @@ export default function Auth({ signup = false }) {
             <>
               <Field
                 label="Your name"
+                minLength={2}
+                maxLength={80}
                 required
                 value={f.name}
                 onChange={(e) => set("name", e.target.value)}
@@ -145,16 +143,16 @@ export default function Auth({ signup = false }) {
               </button>
             </div>
           </Field>
-          {error && (
+          {(error || authError) && (
             <p role="alert" className="error">
-              {error}
+              {error || authError}
             </p>
           )}
           <Button disabled={loading} type="submit">
             {loading ? (
               <LoaderCircle className="spin" size={18} />
             ) : signup ? (
-              "Create demo account"
+              "Create account"
             ) : (
               "Sign in"
             )}
@@ -168,29 +166,11 @@ export default function Auth({ signup = false }) {
           </Link>
         </div>
         <div className="demo-accounts">
-          <span className="eyebrow">TAKE A LOOK AROUND</span>
-          <p>Try a clearly labelled demo account.</p>
-          <div className="actions">
-            <Button
-              disabled={loading}
-              className="secondary"
-              onClick={() => submit(null, "guest")}
-            >
-              Explore as guest
-            </Button>
-            <Button
-              disabled={loading}
-              className="secondary"
-              onClick={() => submit(null, "host")}
-            >
-              Explore as host
-            </Button>
-          </div>
-          <small>
-            guest@staysphere.demo / host@staysphere.demo
-            <br />
-            Password: Demo123! · Frontend simulation, not production security.
-          </small>
+          <span className="eyebrow">YOUR ACCOUNT, YOUR SPACE</span>
+          <p>
+            Sign in with your registered email. Your session is managed using a
+            secure HTTP-only cookie.
+          </p>
         </div>
       </main>
     </div>

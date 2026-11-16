@@ -1,6 +1,6 @@
 # StaySphere
 
-A React + Vite property discovery and management frontend with a modular Express API foundation. The UI remains mock-backed in Task 1; the server currently exposes a liveness endpoint only.
+A React + Vite property discovery and management frontend with a modular Express API foundation. Authentication and profiles now use a MongoDB-backed Express API. Property CRUD, favorites, calendars, and AI remain mock-backed pending their backend tasks.
 
 ## Run locally
 
@@ -13,14 +13,14 @@ cp .env.example .env
 cp server/.env.example server/.env
 ```
 
-The blank templates contain variable names only. Defaults work locally without secrets: API port 5000 and frontend origin http://localhost:5173. In separate terminals:
+The blank templates contain variable names only. Before starting, configure ignored `server/.env` with `MONGO_URI`, a random `JWT_SECRET` of at least 32 characters, and `CLIENT_URL=http://localhost:5173`. `NODE_ENV=development` and `PORT=5000` are local defaults. No account secrets belong in the root frontend `.env`. In separate terminals:
 
 ```sh
 npm run dev:client
 npm run dev:server
 ```
 
-`npm run dev` is still the original frontend command. Vite proxies `/api` to http://127.0.0.1:5000; if you change the API port, update that development proxy too. The current UI deliberately continues using mock services until later tasks.
+`npm run dev` is still the original frontend command. Vite proxies `/api` to http://127.0.0.1:5000; if you change the API port, update that development proxy too. Auth uses the HTTP API now; non-auth product services remain mocked.
 
 ```sh
 curl -i http://localhost:5000/api/health
@@ -30,27 +30,36 @@ npm --prefix server run check
 npm run start:server    # production-style API start
 ```
 
-Health responds HTTP 200 with `{ "data": { "status": "ok", "service": "staysphere-api" } }`. It checks HTTP liveness, not MongoDB connectivity. An app factory is separate from the listener for testing. The API uses Helmet, credential-aware origin allowlisting, request rate limiting, a 100 KB JSON limit, cookie parsing, and centralized sanitized errors. No login, database, uploads, or AI endpoints exist yet.
+The server connects to MongoDB and initializes the unique user email index before listening. Missing configuration or failed connection stops startup. Once running, health responds HTTP 200 with `{ "data": { "status": "ok", "service": "staysphere-api" } }`; health is liveness rather than a continuous database-readiness probe. An app factory is separate from the listener for testing. The API uses Helmet, credential-aware origin allowlisting, request rate limiting, a 100 KB JSON limit, cookie parsing, and centralized sanitized errors. Authentication and profile endpoints are implemented; listing/upload/AI persistence endpoints are not.
 
 ## Deployment preparation
 
-**Render API:** use `render.yaml` as a Blueprint, or create a Node web service with root directory `server`, build command `npm ci --omit=dev`, start command `npm start`, and health path `/api/health`. Set `NODE_ENV=production` and `CLIENT_ORIGIN` to the exact frontend origin, for example your Vercel HTTPS origin, without a trailing slash. Multiple approved origins may be comma-separated. Render supplies `PORT`; the server listens on `0.0.0.0` and shuts down gracefully on SIGTERM. No external database credential is needed for Task 1 health.
+**Render API:** use `render.yaml` as a Blueprint, or create a Node web service with root directory `server`, build command `npm ci --omit=dev`, start command `npm start`, and health path `/api/health`. Set `NODE_ENV=production` and `CLIENT_URL` to the exact frontend origin, for example your Vercel HTTPS origin, without a trailing slash. Multiple approved origins may be comma-separated. Render supplies `PORT`; the server listens on `0.0.0.0` and shuts down gracefully on SIGTERM. Set `MONGO_URI` and `JWT_SECRET` in Render; startup now requires both.
 
-**Vercel frontend:** import the verified GitHub repo, choose Vite, keep root directory at repository root, build with `npm run build`, and publish `dist`. `vercel.json` provides SPA routing for direct route refresh. In later tasks, set public `VITE_API_BASE_URL` to the Render API origin plus `/api`; never use VITE-prefixed variables for secrets. Existing Sites hosting is preserved in `.openai/hosting.json` and is separate from Render/Vercel. This task does not provision or deploy external infrastructure.
+**Vercel frontend:** import the verified GitHub repo, choose Vite, keep root directory at repository root, build with `npm run build`, and publish `dist`. `vercel.json` provides SPA routing for direct route refresh. Set public `VITE_API_BASE_URL` to the Render API origin plus `/api`; never use VITE-prefixed variables for secrets. Existing Sites hosting is preserved in `.openai/hosting.json` and is separate from Render/Vercel. This task does not provision or deploy external infrastructure.
 
-Cross-site HTTP-only cookie attributes, CSRF protection, and production domain choices must be finalized when real authentication is added. All frontend role guards and credentials below are currently demo-only.
+Production cookies are host-only, HTTP-only, Secure, SameSite=None, path `/`, with seven-day expiry. Local development uses SameSite=Lax without Secure. All unsafe auth requests require `X-CSRF-Protection: 1`; the centralized client sends this and `credentials: include`. Only exact configured origins receive credentialed CORS responses.
 
-## Demo accounts
+## Real accounts and session behavior
 
-- Guest: `guest@staysphere.demo`
-- Host: `host@staysphere.demo`
-- Both passwords: `Demo123!`
+Register at `/signup` as a guest or host, then sign in with the same email/password. There are no demo account shortcuts or seeded login credentials. The API stores bcrypt password hashes, not plaintext passwords. JWTs remain exclusively in an HTTP-only cookie. The React session is in memory and restored from `/api/auth/me` after refresh; guards wait for restoration, and network failures offer retry. Legacy mock accounts/user records are removed from browser storage. Logout clears the cookie and frontend session; profile updates persist in MongoDB. Local demo data reset does not delete the account or log out.
 
-Use the one-click demo account buttons on `/login`, or create a local demo account. Authentication is frontend simulation, not security. Never enter a real password. Local demo credentials and state live in localStorage. Profile → Reset demo data clears everything.
+Endpoints: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `PATCH /api/auth/profile`. `GET /api/auth/host-access` demonstrates backend host-role enforcement. Authorization reads the current database role; client roles and JWT role claims are not trusted. Tokens are not returned in JSON. Login and registration share a 20-attempt / 15-minute per-IP limit. Passwords must be at least 8 characters and no more than 72 UTF-8 bytes (bcrypt limit). Registration and profile update handle MongoDB unique-index races safely.
+
+### Required external setup
+
+1. Create an Atlas cluster and database user; allow the development machine/backend host's outbound IPs in Atlas network access. Copy its connection string into ignored `server/.env` as `MONGO_URI`, including a database name. Never paste credentials into chat or Git.
+2. Generate a random JWT secret locally, e.g. `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"`. Store it as `JWT_SECRET` in `server/.env` and later Render's server environment, never in Vercel frontend variables.
+3. For local development set `CLIENT_URL=http://localhost:5173`. For Render set `NODE_ENV=production`, `CLIENT_URL` to the exact HTTPS Vercel origin (no trailing slash), and the server secrets. Render supplies `PORT`.
+4. In Vercel set `VITE_API_BASE_URL` to your HTTPS Render origin plus `/api`, then rebuild/redeploy. Do not place JWT, database, Cloudinary, or LLM keys in `VITE_*` variables. Verify registration, refresh, role redirects, profile update, and logout in the deployed browser.
+
+Some browsers block third-party cookies between unrelated Vercel/Render domains even with SameSite=None. If your target browsers block them, use same-site custom domains such as `app.example.com` / `api.example.com`, or a same-origin API proxy. Then update `CLIENT_URL` and `VITE_API_BASE_URL` accordingly and retest. CORS cannot override browser third-party-cookie blocking.
+
+Logout clears the browser cookie; this MVP has no server-side JWT revocation list, so a previously copied token remains valid until expiry. Logout-all-devices and refresh tokens are outside this task. No email verification or password reset is required.
 
 ## Included experiences
 
-Public home, explore, property details, about, login, signup, 404; guarded guest dashboard, favorites, mock AI finder, profile; guarded host analytics dashboard, listing CRUD, local image previews, description generation, and availability management. All pages consume the same 12-property demo dataset through shared services. Favorites may also be saved before login on the same browser.
+Public home, explore, property details, about, login, signup, 404; guarded guest dashboard, favorites, mock AI finder, profile; guarded host analytics dashboard, listing CRUD, local image previews, description generation, and availability management. Property screens consume the same 12-property demo dataset through shared services. Favorites may also be saved before login on the same browser.
 
 React Router, Tailwind CSS, Framer Motion, Lucide, React Day Picker, Recharts, and lazy-loaded React Three Fiber/Drei are used. The architectural scene falls back to photography when WebGL is unavailable or reduced motion is requested. Property photographs are illustrative Unsplash assets, not photos of real advertised Indian rentals; fonts load from Google Fonts. Internet access is needed for these assets.
 
@@ -62,11 +71,11 @@ React Router, Tailwind CSS, Framer Motion, Lucide, React Day Picker, Recharts, a
 - `src/components`: public/dashboard layouts, property cards, calendar, 3D, analytics, UI
 - `src/pages`: route screens and reusable listing form
 
-Configure `VITE_API_BASE_URL` for future backend work. See BACKEND_INTEGRATION.md. There is no checkout, booking creation, payment gateway, real authentication, or LLM integration.
+Configure `VITE_API_BASE_URL` for future backend work. See BACKEND_INTEGRATION.md. There is no checkout, booking creation, payment gateway, or live LLM integration.
 
 ## Verification
 
-Production build and Node service tests cover authentication roles, filtering, grounded mock AI, favorites, listing CRUD, and end-exclusive calendar overlap rules. Browser UI, console, and device testing were not available in the build environment; verify these manually before a recruiter demo. Local image storage is limited by browser quota (typically 5–10 MB); keep images small.
+Production build and Node service tests cover filtering, grounded mock AI, favorites, listing CRUD, end-exclusive intervals, auth HTTP flows, bcrypt, JWT cookies, server roles, validation, CSRF and rate limiting. Auth tests inject an in-memory user repository into the real routes/controllers/service and validate the Mongoose schema without a database. No Atlas connection, actual MongoDB persistence, browser refresh, or deployed cross-domain cookie result is claimed without external setup. Browser UI, console, and device testing were not available in the build environment; verify these manually before a recruiter demo. Local image storage is limited by browser quota (typically 5–10 MB); keep images small.
 
 ## Cinematic homepage
 

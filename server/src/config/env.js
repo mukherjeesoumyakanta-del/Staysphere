@@ -21,9 +21,9 @@ export function getConfig(env = process.env) {
     Number(portValue) > 65535
   )
     throw new Error("PORT must be an integer between 1 and 65535");
-  if (nodeEnv === "production" && !env.CLIENT_ORIGIN?.trim())
-    throw new Error("CLIENT_ORIGIN is required in production");
-  const origins = (env.CLIENT_ORIGIN || "http://localhost:5173")
+  if (nodeEnv === "production" && !env.CLIENT_URL?.trim())
+    throw new Error("CLIENT_URL is required in production");
+  const origins = (env.CLIENT_URL || "http://localhost:5173")
     .split(",")
     .map((v) => v.trim());
   for (const origin of origins) {
@@ -32,7 +32,7 @@ export function getConfig(env = process.env) {
       parsed = new URL(origin);
     } catch {
       throw new Error(
-        "CLIENT_ORIGIN must contain comma-separated HTTP(S) origins",
+        "CLIENT_URL must contain comma-separated HTTP(S) origins",
       );
     }
     if (
@@ -40,8 +40,23 @@ export function getConfig(env = process.env) {
       parsed.origin !== origin
     )
       throw new Error(
-        "CLIENT_ORIGIN must contain origins only, without paths or trailing slashes",
+        "CLIENT_URL must contain origins only, without paths or trailing slashes",
       );
   }
-  return Object.freeze({ nodeEnv, port: Number(portValue), origins });
+  if (
+    nodeEnv === "production" &&
+    origins.some((origin) => !origin.startsWith("https://"))
+  )
+    throw new Error("CLIENT_URL must use HTTPS in production");
+  const jwtSecret = env.JWT_SECRET || "";
+  if (jwtSecret && jwtSecret.trim().length < 32)
+    throw new Error("JWT_SECRET must be at least 32 characters");
+  return Object.freeze({
+    nodeEnv,
+    port: Number(portValue),
+    origins,
+    mongoUri: env.MONGO_URI || "",
+    jwtSecret,
+    jwtTtlSeconds: 7 * 24 * 60 * 60,
+  });
 }

@@ -9,6 +9,20 @@ export function errorHandler(error, req, res, next) {
     message = "An unexpected error occurred";
   if (error instanceof ApiError) {
     ({ status, code, message } = error);
+  } else if (error.name === "ValidationError" || error.name === "CastError") {
+    status = 400;
+    code = "VALIDATION_ERROR";
+    message = "Invalid account data";
+  } else if (
+    [
+      "MongoServerSelectionError",
+      "MongooseServerSelectionError",
+      "MongoNetworkError",
+    ].includes(error.name)
+  ) {
+    status = 503;
+    code = "DATABASE_UNAVAILABLE";
+    message = "Account service is temporarily unavailable";
   } else if (error.type === "entity.parse.failed") {
     status = 400;
     code = "INVALID_JSON";

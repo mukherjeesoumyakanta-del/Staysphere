@@ -4,7 +4,6 @@ import {
   read,
   write,
   filterListings,
-  authService,
   listingService,
   favoriteService,
   aiService,
@@ -12,19 +11,6 @@ import {
 } from "./index.js";
 import { dateAfter } from "../data/properties.js";
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-test("guest and host demo authentication reject wrong credentials and retain role", async () => {
-  await assert.rejects(authService.login("host@staysphere.demo", "bad"));
-  assert.equal(
-    (await authService.login("host@staysphere.demo", "Demo123!")).data.role,
-    "HOST",
-  );
-  assert.equal(
-    (await authService.login("guest@staysphere.demo", "Demo123!")).data.role,
-    "GUEST",
-  );
-  await authService.logout();
-  assert.equal(read().user, null);
-});
 test("filters combine budget, location, guests, type and amenities", () => {
   const results = filterListings(read().listings, {
     q: "Goa",

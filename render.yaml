@@ -12,5 +12,9 @@ services:
         value: 22.16.0
       - key: NODE_ENV
         value: production
-      - key: CLIENT_ORIGIN
+      - key: CLIENT_URL
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
         sync: false

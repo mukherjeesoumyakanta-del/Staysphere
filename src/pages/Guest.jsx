@@ -256,9 +256,12 @@ export function Profile() {
   const { user, refresh, reset } = useStore();
   const [f, setF] = useState({ name: user.name, email: user.email }),
     [saved, setSaved] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [saving, setSaving] = useState(false);
   async function save(e) {
     e.preventDefault();
+    setSaving(true);
+    setSaved(false);
     try {
       await authService.update(f);
       refresh();
@@ -266,6 +269,8 @@ export function Profile() {
       setError("");
     } catch (e) {
       setError(e.message);
+    } finally {
+      setSaving(false);
     }
   }
   return (
@@ -300,15 +305,15 @@ export function Profile() {
           }}
         />
         <Field label="Account role">
-          <input disabled value={user.role + " · Mock account"} />
+          <input disabled value={user.role} />
         </Field>
-        <Button type="submit">
-          Save changes
+        <Button type="submit" disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
           <Check size={16} />
         </Button>
         {saved && (
           <p role="status" className="success">
-            Your demo profile has been updated.
+            Your profile has been updated.
           </p>
         )}
         {error && <p className="error">{error}</p>}
@@ -316,8 +321,8 @@ export function Profile() {
       <div className="panel reset-panel">
         <h3>Start fresh</h3>
         <p>
-          Reset clears listings, saved spaces, uploaded images, accounts, and
-          your current demo session.
+          Reset clears only local demo listings, saved spaces, and image
+          previews. Your registered account and server session remain unchanged.
         </p>
         <Button
           className="secondary"

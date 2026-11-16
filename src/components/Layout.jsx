@@ -22,7 +22,7 @@ import {
   PanelLeftClose,
   ArrowRight,
 } from "lucide-react";
-import { Brand, Button } from "./UI";
+import { Brand, Button, Loading, Empty } from "./UI";
 import { useStore } from "../context/Store";
 import { authService } from "../services";
 export function Navbar() {
@@ -114,8 +114,18 @@ export function PublicLayout() {
   );
 }
 export function ProtectedRoute({ role }) {
-  const { user } = useStore();
+  const { user, authLoading, authError, restoreSession } = useStore();
   const location = useLocation();
+  if (authLoading) return <Loading />;
+  if (authError && !user)
+    return (
+      <Empty title="Could not restore your session" text={authError}>
+        <Button onClick={restoreSession}>Try again</Button>
+        <Button className="secondary" to="/login">
+          Sign in
+        </Button>
+      </Empty>
+    );
   if (!user)
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   if (user.role !== role)
@@ -126,6 +136,8 @@ export function DashboardLayout({ role }) {
   const [open, setOpen] = useState(false),
     [collapsed, setCollapsed] = useState(false);
   const { user, refresh } = useStore();
+  const [logoutError, setLogoutError] = useState(""),
+    [loggingOut, setLoggingOut] = useState(false);
   const navigate = useNavigate();
   const host = role === "HOST";
   const base = host ? "/host" : "/guest";
@@ -170,16 +182,30 @@ export function DashboardLayout({ role }) {
             Explore stays
           </Link>
           <button
+            disabled={loggingOut}
             onClick={async () => {
-              await authService.logout();
-              refresh();
-              navigate("/");
+              setLoggingOut(true);
+              setLogoutError("");
+              try {
+                await authService.logout();
+                refresh();
+                navigate("/");
+              } catch (error) {
+                setLogoutError(error.message);
+              } finally {
+                setLoggingOut(false);
+              }
             }}
           >
             <LogOut size={18} />
-            Sign out
+            {loggingOut ? "Signing out…" : "Sign out"}
           </button>
-          <small>Mock account · demo mode</small>
+          {logoutError && (
+            <p role="alert" className="error">
+              {logoutError}
+            </p>
+          )}
+          <small>Signed-in account · Demo property data</small>
         </div>
       </aside>
       <div className="workspace-main">
@@ -193,7 +219,7 @@ export function DashboardLayout({ role }) {
           </button>
           <span>{host ? "Property management" : "A little space for you"}</span>
           <div>
-            <span className="demo-label">DEMO WORKSPACE</span>
+            <span className="demo-label">DEMO PROPERTY DATA</span>
             <Link to={base + "/profile"} className="avatar">
               {user.name[0]}
             </Link>

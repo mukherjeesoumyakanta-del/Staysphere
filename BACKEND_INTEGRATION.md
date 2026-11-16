@@ -1,16 +1,16 @@
 # Backend integration contract
 
-Task 1 adds the Express skeleton under `server/` with `GET /api/health`. All product workflows are still client-side; database persistence and real auth are not yet implemented. Replace implementations in `src/services/index.js`; presentation code should consume the same `{data: ...}` promise responses. Reject errors with a useful `.message`. Use `VITE_API_BASE_URL` (default `/api`) in a centralized Fetch client with `credentials: 'include'`. Add real network loading/error handling to every mutating screen when migrating.
+Task 2 implements MongoDB-backed authentication and profiles in `server/`. The remaining property, favorite, availability, upload, and AI workflows are still browser-local mocks. Replace implementations in `src/services/index.js`; presentation code should consume the same `{data: ...}` promise responses. Reject errors with a useful `.message`. Use `VITE_API_BASE_URL` (default `/api`) in a centralized Fetch client with `credentials: 'include'`. Add real network loading/error handling to every mutating screen when migrating.
 
 ## Planned endpoints
 
 | Service                              | Endpoint                                       | Request                                            | Response data                      |
 | ------------------------------------ | ---------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
 | authService.login                    | POST /api/auth/login                           | {email,password}                                   | User                               |
-| authService.signup                   | POST /api/auth/signup                          | {name,email,password,role}                         | User                               |
+| authService.signup                   | POST /api/auth/register                        | {name,email,password,role}                         | User                               |
 | session                              | GET /api/auth/me                               | —                                                  | User or null                       |
 | authService.logout                   | POST /api/auth/logout                          | —                                                  | null                               |
-| authService.update                   | PATCH /api/users/me                            | {name,email}                                       | User                               |
+| authService.update                   | PATCH /api/auth/profile                        | {name,email}                                       | User                               |
 | listingService.list                  | GET /api/listings                              | q,min,max,guests,bedrooms,type,amenities,sort,page | Listing[]; add pagination metadata |
 | listingService.save                  | POST /api/listings or PATCH /api/listings/:id  | Listing input                                      | Listing                            |
 | listingService.remove                | DELETE /api/listings/:id                       | —                                                  | id                                 |
@@ -33,9 +33,15 @@ AvailabilityBlock: `{id,start:'YYYY-MM-DD',end:'YYYY-MM-DD',reason:'Booked'|'Mai
 
 Filters: `{q?,min?,max?,guests?,bedrooms?,type?,amenities?:string[],sort?:'new'|'low'|'high'}`. Capacity and bedroom filters mean minimum capacity, not exact equality.
 
-## Authentication and authorization
+## Authentication and authorization — implemented
 
-Replace localStorage accounts with Express sessions using JWT in secure HTTP-only cookies (or a secure server session). Add CSRF protection, server-side role enforcement, owner checks, rate limits, password hashing, and signup/login validation. React route guards are presentation only. Initialize session through `/auth/me`. Do not store real credentials or access tokens in localStorage. The current demo profile update updates the mock session; persisted account records are not an identity system.
+`src/services/apiClient.js` centralizes Fetch with `credentials: 'include'`, JSON/error handling, timeout, and `X-CSRF-Protection: 1` on mutations. `authService.js` stores only a current user DTO in memory; the context subscribes and restores via `/api/auth/me`. Old browser-local mock credentials are migrated away and demo account login is removed in all builds. Protected routes wait for session restoration; backend role middleware checks the current User in MongoDB, not client state.
+
+The server uses Mongoose User documents with name, normalized unique email, passwordHash (select:false), GUEST/HOST role, optional avatar and timestamps. Passwords use bcrypt with 12 rounds. JWTs use HS256 with issuer/audience verification, user ID subject, and seven-day expiry. No token/hash is returned in response JSON. Auth data uses `{data:User}`; errors use `{error:{code,message}}`. `POST /auth/register` returns 201, login/me/profile return 200, and logout returns `{data:null}`. Invalid sessions/credentials return 401, forbidden roles 403, duplicate emails 409, validation errors 400, and auth throttling 429. Host authorization is exercised by `/api/auth/host-access` and must be reused for future listing mutation routes.
+
+Production cookie: `staysphere_session`, HttpOnly, Secure, SameSite=None, Path=/, no Domain attribute. Development: SameSite=Lax, Secure=false. CORS allowlists exact `CLIENT_URL` origins, supports credentials, and rejects other origins. Mutations require a non-simple CSRF header; preflight is subject to the allowlist. Browser third-party-cookie policies may require custom same-site domains or a same-origin proxy. Logout clears the cookie; stateless JWTs have no revocation list in this MVP. Password reset and email verification are not implemented.
+
+Active server variable names are `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, `NODE_ENV`, `PORT`; old `MONGODB_URI`/`CLIENT_ORIGIN` names are no longer used. The listener connects and initializes indexes before accepting requests. Set only the public `VITE_API_BASE_URL` in the frontend. See README for exact setup.
 
 ## Images
 
@@ -51,4 +57,4 @@ Search currently uses deterministic parsing of known destinations, types, budget
 
 ## Known mock limitations
 
-All data is browser-local and resettable, no shared multi-user persistence, no production access control, no real AI, no bookings, no payments, no map/geocoding, no email delivery, and simulated property views. Signup passwords are plain demo values in localStorage: never reuse real credentials. Host charts are fixed simulated data and do not represent real traffic. External stock photos illustrate demo listings. Public favorites are local to this browser. Upload quota is browser-dependent. The availability service should eventually use transactions. Frontend API clients should replace direct context mutations for recent views and reset operations when backend integration begins.
+Property/favorite/calendar data remains browser-local and resettable; auth/profile persistence is implemented, but there is no shared property persistence or real AI, no bookings, no payments, no map/geocoding, no email delivery, and simulated property views. User passwords and tokens are no longer stored in localStorage. Host charts are fixed simulated data and do not represent real traffic. External stock photos illustrate demo listings. Public favorites are local to this browser. Upload quota is browser-dependent. The availability service should eventually use transactions. Frontend API clients should replace direct context mutations for recent views and reset operations when backend integration begins.

@@ -37,9 +37,9 @@ export function About() {
           </p>
           <p>
             This B.Tech frontend project explores a more considered way to
-            discover and manage rental properties. Its AI features, accounts,
-            availability, and analytics are clearly simulated, ready for a
-            future MERN backend.
+            discover and manage rental properties. Its AI features, property
+            availability, and analytics are simulated. Registration and profiles
+            use the MongoDB authentication API.
           </p>
           <p>
             No online booking, payments, or real AI calls are enabled. Every

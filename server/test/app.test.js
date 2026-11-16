@@ -80,14 +80,14 @@ test("configuration validates deployment settings without requiring future-servi
   assert.equal(getConfig({ PORT: "" }).port, 5000);
   for (const PORT of ["0", "-1", "65536", "text", "12.5"])
     assert.throws(() => getConfig({ PORT }), /PORT/);
-  assert.throws(() => getConfig({ NODE_ENV: "production" }), /CLIENT_ORIGIN/);
-  assert.throws(() => getConfig({ CLIENT_ORIGIN: "*" }), /CLIENT_ORIGIN/);
+  assert.throws(() => getConfig({ NODE_ENV: "production" }), /CLIENT_URL/);
+  assert.throws(() => getConfig({ CLIENT_URL: "*" }), /CLIENT_URL/);
   assert.throws(
-    () => getConfig({ CLIENT_ORIGIN: "https://example.com/path" }),
+    () => getConfig({ CLIENT_URL: "https://example.com/path" }),
     /origins only/,
   );
   assert.equal(
-    getConfig({ NODE_ENV: "production", CLIENT_ORIGIN: "https://example.com" })
+    getConfig({ NODE_ENV: "production", CLIENT_URL: "https://example.com" })
       .nodeEnv,
     "production",
   );
