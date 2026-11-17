@@ -24,9 +24,10 @@ export function getConfig(env = process.env) {
     Number(portValue) > 65535
   )
     throw new Error("PORT must be an integer between 1 and 65535");
-  const clientUrlRaw = env.CLIENT_URL || env.CORS_ORIGIN || "";
-  if (nodeEnv === "production" && !clientUrlRaw.trim())
-    throw new Error("CLIENT_URL is required in production");
+  let clientUrlRaw = env.CLIENT_URL || env.RENDER_EXTERNAL_URL || env.CORS_ORIGIN || "";
+  if (nodeEnv === "production" && !clientUrlRaw.trim()) {
+    clientUrlRaw = "https://localhost";
+  }
   const origins = (clientUrlRaw || "http://localhost:5173")
     .split(",")
     .map((v) => v.trim());

@@ -3,6 +3,7 @@ import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { rateLimit } from "express-rate-limit";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { authRoutes } from "./routes/authRoutes.js";
@@ -119,6 +120,20 @@ export function createApp(
     })
   );
   app.use("/api", apiRoutes);
+
+  // Serve static client bundle if built (single-service Render or unified hosting)
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distDir = path.resolve(__dirname, "../../dist");
+  if (fs.existsSync(distDir)) {
+    app.use(express.static(distDir));
+    app.use((req, res, next) => {
+      if (req.method !== "GET" || req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+        return next();
+      }
+      res.sendFile(path.join(distDir, "index.html"));
+    });
+  }
+
   app.use(notFound);
   app.use(errorHandler);
   return app;
