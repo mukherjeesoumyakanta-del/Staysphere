@@ -47,6 +47,12 @@ export function authRoutes(config, users) {
     validateAuth("profile"),
     controller.profile,
   );
+  router.post(
+    "/switch-role",
+    csrfProtection,
+    authenticate(service),
+    controller.switchRole,
+  );
   router.get(
     "/host-access",
     authenticate(service),

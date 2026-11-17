@@ -111,6 +111,9 @@ export default function Auth({ signup = false }) {
                   </button>
                 ))}
               </div>
+              <small style={{ display: "block", marginTop: "-0.5rem", marginBottom: "1.25rem", fontSize: "11px", color: "#617258" }}>
+                ✦ Single account dual-role: you can switch between hosting and traveling anytime.
+              </small>
             </>
           )}
           <Field

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles,
   ArrowUpRight,
@@ -13,6 +13,7 @@ import {
   Check,
   House,
   CalendarDays,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useStore } from "../context/Store";
 import { aiService, authService } from "../services";
@@ -26,7 +27,9 @@ import {
   ConfirmDialog,
 } from "../components/UI";
 export function GuestDashboard() {
-  const { user, listings, favorites, recent } = useStore();
+  const { user, listings, favorites, recent, switchRole } = useStore();
+  const navigate = useNavigate();
+  const [switchingHost, setSwitchingHost] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
 
   useEffect(() => {
@@ -148,6 +151,34 @@ export function GuestDashboard() {
           />
         </>
       )}
+
+      {/* Dual-role account host invitation banner */}
+      <div className="panel host-switch-banner" style={{ marginTop: "2.5rem" }}>
+        <div className="host-switch-banner-text">
+          <span className="eyebrow">SINGLE ACCOUNT · DUAL ROLE</span>
+          <h3>Want to become a host with this account?</h3>
+          <p>
+            You do not need a separate account to host. Switch to Host mode anytime to list properties, manage availability, and accept guest bookings.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="button secondary"
+          disabled={switchingHost}
+          onClick={async () => {
+            setSwitchingHost(true);
+            try {
+              await switchRole("HOST");
+              navigate("/host/dashboard");
+            } finally {
+              setSwitchingHost(false);
+            }
+          }}
+        >
+          <ArrowLeftRight size={15} />
+          <span>{switchingHost ? "Switching…" : "Switch to Host Mode"}</span>
+        </button>
+      </div>
     </>
   );
 }
@@ -591,11 +622,14 @@ export function AIFinder() {
   );
 }
 export function Profile() {
-  const { user, refresh, reset } = useStore();
+  const { user, refresh, reset, switchRole } = useStore();
+  const navigate = useNavigate();
   const [f, setF] = useState({ name: user.name, email: user.email }),
     [saved, setSaved] = useState(false),
     [error, setError] = useState(""),
-    [saving, setSaving] = useState(false);
+    [saving, setSaving] = useState(false),
+    [switching, setSwitching] = useState(false);
+
   async function save(e) {
     e.preventDefault();
     setSaving(true);
@@ -611,6 +645,20 @@ export function Profile() {
       setSaving(false);
     }
   }
+
+  async function handleToggleRole() {
+    setSwitching(true);
+    try {
+      const next = user.role === "HOST" ? "GUEST" : "HOST";
+      await switchRole(next);
+      navigate(next === "HOST" ? "/host/dashboard" : "/guest/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   return (
     <>
       <div className="dashboard-title">
@@ -642,9 +690,6 @@ export function Profile() {
             setSaved(false);
           }}
         />
-        <Field label="Account role">
-          <input disabled value={user.role} />
-        </Field>
         <Button type="submit" disabled={saving}>
           {saving ? "Saving…" : "Save changes"}
           <Check size={16} />
@@ -656,6 +701,31 @@ export function Profile() {
         )}
         {error && <p className="error">{error}</p>}
       </form>
+
+      {/* Single Account Dual-Role Switcher Panel */}
+      <div className="panel profile-role-panel">
+        <div className="role-panel-header">
+          <div>
+            <span className="eyebrow">SINGLE ACCOUNT DUAL-ROLE</span>
+            <h3>Active Account Mode: <em>{user.role}</em></h3>
+            <p>
+              {user.role === "HOST"
+                ? "You are currently in Host mode, allowing you to manage property listings, accept reservations, and configure availability. You can switch to Guest mode anytime to explore and book stays."
+                : "You are currently in Guest mode, allowing you to discover stays, use AI search, and save favorites. You can switch to Host mode anytime to list properties."}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button secondary role-switch-action-btn"
+            disabled={switching}
+            onClick={handleToggleRole}
+          >
+            <ArrowLeftRight size={16} />
+            <span>{switching ? "Switching…" : `Switch to ${user.role === "HOST" ? "Guest Mode" : "Host Mode"}`}</span>
+          </button>
+        </div>
+      </div>
+
       <div className="panel reset-panel">
         <h3>Start fresh</h3>
         <p>

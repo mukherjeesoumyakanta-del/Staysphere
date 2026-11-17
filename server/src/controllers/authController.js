@@ -18,6 +18,16 @@ export function authController(service, config) {
     me: (req, res) => res.json({ data: req.user }),
     profile: async (req, res) =>
       res.json({ data: await service.update(req.user.id, req.validated) }),
+    switchRole: async (req, res) => {
+      const nextRole = req.body?.role || (req.user.role === "HOST" ? "GUEST" : "HOST");
+      if (!["GUEST", "HOST"].includes(nextRole)) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Role must be GUEST or HOST" },
+        });
+      }
+      const updated = await service.update(req.user.id, { role: nextRole });
+      res.json({ data: updated, message: `Switched to ${nextRole} mode` });
+    },
     hostAccess: (req, res) => res.json({ data: { role: req.user.role } }),
   };
 }

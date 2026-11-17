@@ -1,5 +1,5 @@
 import { useState, lazy, Suspense, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   House,
   Check,
@@ -10,6 +10,7 @@ import {
   Pencil,
   Trash2,
   ArrowRight,
+  ArrowLeftRight,
 } from "lucide-react";
 import { motion, animate, useInView, useReducedMotion } from "framer-motion";
 import { useStore } from "../context/Store";
@@ -73,7 +74,9 @@ function SkeletonTable() {
 }
 
 export function HostDashboard() {
-  const { user, refreshApiListings } = useStore();
+  const { user, refreshApiListings, switchRole } = useStore();
+  const navigate = useNavigate();
+  const [switchingGuest, setSwitchingGuest] = useState(false);
   const [mine, setMine] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -172,6 +175,34 @@ export function HostDashboard() {
           listingApiService.getHostListings().then((r) => setMine(r.data)).catch(() => {});
         }} />
       )}
+
+      {/* Dual-role account guest traveler invitation banner */}
+      <div className="panel host-switch-banner" style={{ marginTop: "2.5rem" }}>
+        <div className="host-switch-banner-text">
+          <span className="eyebrow">SINGLE ACCOUNT · DUAL ROLE</span>
+          <h3>Looking for your own getaway?</h3>
+          <p>
+            You can use this same account to explore extraordinary stays, use AI discovery, and book vacations as a guest anytime.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="button secondary"
+          disabled={switchingGuest}
+          onClick={async () => {
+            setSwitchingGuest(true);
+            try {
+              await switchRole("GUEST");
+              navigate("/guest/dashboard");
+            } finally {
+              setSwitchingGuest(false);
+            }
+          }}
+        >
+          <ArrowLeftRight size={15} />
+          <span>{switchingGuest ? "Switching…" : "Switch to Guest Mode"}</span>
+        </button>
+      </div>
     </>
   );
 }

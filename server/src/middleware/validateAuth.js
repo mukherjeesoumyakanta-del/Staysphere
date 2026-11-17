@@ -41,7 +41,7 @@ export function validateAuth(kind) {
         ? ["name", "email", "password", "role"]
         : kind === "login"
           ? ["email", "password"]
-          : ["name", "email", "avatar"];
+          : ["name", "email", "avatar", "role"];
     if (Object.keys(body).some((k) => !allowed.includes(k)))
       invalid("Request contains unsupported fields");
     if (kind === "register") {
@@ -78,6 +78,11 @@ export function validateAuth(kind) {
             invalid("Avatar must be an HTTPS image URL");
         }
         req.validated.avatar = body.avatar;
+      }
+      if ("role" in body) {
+        if (!["GUEST", "HOST"].includes(body.role))
+          invalid("Role must be GUEST or HOST");
+        req.validated.role = body.role;
       }
     }
     next();

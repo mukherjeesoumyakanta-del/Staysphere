@@ -131,6 +131,12 @@ export function StoreProvider({ children }) {
     location.href = "/";
   };
 
+  const switchRole = useCallback(async (targetRole) => {
+    const res = await authService.switchRole(targetRole);
+    if (res?.data) setUser(res.data);
+    return res?.data;
+  }, []);
+
   // Single source of truth: real MongoDB listings combined with demo listings
   const listings =
     apiListings !== null && apiListings.length > 0
@@ -150,6 +156,7 @@ export function StoreProvider({ children }) {
         toggleFavorite,
         refreshFavorites,
         user,
+        switchRole,
         authLoading,
         authError,
         restoreSession,

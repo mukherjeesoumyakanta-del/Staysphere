@@ -1,12 +1,15 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { gsap } from "./motion";
 import { Button } from "../UI";
 import { useStore } from "../../context/Store";
 import BackgroundVideo from "./BackgroundVideo";
 export default function HostingCTA() {
-  const root = useRef(),
-    { user } = useStore();
+  const root = useRef();
+  const { user, switchRole } = useStore();
+  const navigate = useNavigate();
+  const [switching, setSwitching] = useState(false);
   useLayoutEffect(() => {
     const mm = gsap.matchMedia();
     mm.add("(prefers-reduced-motion: no-preference)", () => {
@@ -56,9 +59,35 @@ export default function HostingCTA() {
         </h2>
         <p>Someone’s next favourite place could be yours.</p>
         <Button
-          to={user?.role === "HOST" ? "/host/dashboard" : "/signup?role=HOST"}
+          disabled={switching}
+          onClick={
+            user && user.role !== "HOST"
+              ? async () => {
+                  setSwitching(true);
+                  try {
+                    await switchRole("HOST");
+                    navigate("/host/dashboard");
+                  } finally {
+                    setSwitching(false);
+                  }
+                }
+              : undefined
+          }
+          to={
+            !user
+              ? "/signup?role=HOST"
+              : user.role === "HOST"
+                ? "/host/dashboard"
+                : undefined
+          }
         >
-          Start your hosting story
+          {switching
+            ? "Switching to Host Mode…"
+            : user?.role === "HOST"
+              ? "Go to Host Workspace"
+              : user
+                ? "Switch to Host Mode & List Space"
+                : "Start your hosting story"}
           <ArrowUpRight size={18} />
         </Button>
       </div>

@@ -1628,3 +1628,56 @@
     font-size: 11px;
   }
 }
+
+/* Extra polish for modern smartphones (iPhone, Android: 320px–480px) */
+@media (max-width: 480px) {
+  .cinema-hero {
+    min-height: 820px;
+  }
+  .cinema-hero h1 {
+    font-size: clamp(34px, 10.5vw, 48px);
+    letter-spacing: -1.5px;
+    margin: 18px 0 16px;
+  }
+  .cinema-hero .hero-line:last-child {
+    margin-left: 5vw;
+  }
+  .cinema-hero .hero-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .cinema-hero .hero-buttons .button {
+    width: 100%;
+    justify-content: center;
+    padding: 13px;
+  }
+  .cinematic-home .cinema-scroll {
+    display: none;
+  }
+  .destination-copy h2 {
+    font-size: clamp(42px, 12.5vw, 60px);
+    letter-spacing: -2px;
+  }
+  .destination-copy h2 em {
+    font-size: clamp(18px, 5.5vw, 22px);
+  }
+  .destination-scene {
+    min-height: 480px;
+  }
+  .ai-cinema-copy h2 {
+    font-size: clamp(32px, 9vw, 42px);
+    letter-spacing: -1px;
+  }
+  .hosting-content h2 {
+    font-size: clamp(36px, 10vw, 48px);
+    letter-spacing: -1.5px;
+  }
+  .reel-card {
+    width: 90% !important;
+  }
+  .reel-card .card-image {
+    height: 240px !important;
+  }
+}
+

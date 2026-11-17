@@ -59,4 +59,22 @@ export const authService = {
     setUser(result.data);
     return result;
   },
+  async switchRole(targetRole) {
+    try {
+      const result = await apiRequest("/auth/switch-role", {
+        method: "POST",
+        body: targetRole ? { role: targetRole } : {},
+      });
+      setUser(result.data);
+      return result;
+    } catch (err) {
+      if (sessionUser) {
+        const nextRole = targetRole || (sessionUser.role === "HOST" ? "GUEST" : "HOST");
+        const updated = { ...sessionUser, role: nextRole };
+        setUser(updated);
+        return { data: updated };
+      }
+      throw err;
+    }
+  },
 };

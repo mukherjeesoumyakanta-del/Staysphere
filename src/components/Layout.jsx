@@ -21,13 +21,30 @@ import {
   Plus,
   PanelLeftClose,
   ArrowRight,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Brand, Button, Loading, Empty } from "./UI";
 import { useStore } from "../context/Store";
 import { authService } from "../services";
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const { user } = useStore();
+  const [switching, setSwitching] = useState(false);
+  const { user, switchRole } = useStore();
+  const navigate = useNavigate();
+
+  const handleSwitchRole = async () => {
+    if (!user || switching) return;
+    setSwitching(true);
+    try {
+      const nextRole = user.role === "HOST" ? "GUEST" : "HOST";
+      await switchRole(nextRole);
+      setOpen(false);
+      navigate(nextRole === "HOST" ? "/host/dashboard" : "/guest/dashboard");
+    } finally {
+      setSwitching(false);
+    }
+  };
+
   return (
     <header className="navbar">
       <div className="nav-inner">
@@ -42,13 +59,86 @@ export function Navbar() {
             <span className="tiny-tag">NEW</span>
           </NavLink>
           <NavLink to="/about">Our story</NavLink>
+
+          {/* Mobile drawer extra actions when open */}
+          <div className="mobile-drawer-actions" onClick={(e) => e.stopPropagation()}>
+            {user ? (
+              <div className="mobile-user-card">
+                <div className="mobile-user-meta">
+                  <div className="avatar small">{user.name?.[0] || "U"}</div>
+                  <div>
+                    <div className="mobile-user-name">{user.name}</div>
+                    <span className="role-badge">Active: {user.role?.toLowerCase()} mode</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="button secondary mobile-role-switch-btn"
+                  disabled={switching}
+                  onClick={handleSwitchRole}
+                >
+                  <ArrowLeftRight size={14} />
+                  {switching ? "Switching…" : `Switch to ${user.role === "HOST" ? "Guest" : "Host"} Mode`}
+                </button>
+                <div className="mobile-user-nav-row">
+                  <Button
+                    className="mobile-workspace-btn"
+                    to={`/${user.role.toLowerCase()}/dashboard`}
+                    onClick={() => setOpen(false)}
+                  >
+                    Open Workspace
+                  </Button>
+                  <button
+                    type="button"
+                    className="button secondary mobile-signout-btn"
+                    onClick={async () => {
+                      try {
+                        await authService.logout();
+                      } finally {
+                        window.location.href = "/";
+                      }
+                    }}
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mobile-auth-group">
+                <Link
+                  className="button secondary mobile-host-btn"
+                  to="/signup?role=HOST"
+                  onClick={() => setOpen(false)}
+                >
+                  Become a host <ArrowUpRight size={15} />
+                </Link>
+                <Button
+                  className="mobile-signin-btn"
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                >
+                  Sign in
+                  <ArrowUpRight size={15} />
+                </Button>
+              </div>
+            )}
+          </div>
         </nav>
         <div className="nav-actions">
           {user ? (
-            <div className="nav-user-actions" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span className="tiny-tag nav-user-tag" style={{ textTransform: "capitalize", padding: "3px 8px" }}>
-                {user.role?.toLowerCase()} · {user.name?.split(" ")[0] || "User"}
-              </span>
+            <div className="nav-user-actions">
+              <button
+                type="button"
+                className="role-switch-pill"
+                disabled={switching}
+                title={`Click to switch to ${user.role === "HOST" ? "Guest" : "Host"} mode`}
+                onClick={handleSwitchRole}
+              >
+                <ArrowLeftRight size={12} />
+                <span className="role-switch-text">
+                  {switching ? "…" : user.role === "HOST" ? "To Guest" : "To Host"}
+                </span>
+              </button>
               <Button
                 className="nav-signin"
                 to={`/${user.role.toLowerCase()}/dashboard`}
@@ -57,14 +147,6 @@ export function Navbar() {
               </Button>
               <button
                 className="button secondary nav-logout-btn"
-                style={{
-                  padding: "0.45rem 0.75rem",
-                  fontSize: "0.85rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  cursor: "pointer",
-                }}
                 onClick={async () => {
                   try {
                     await authService.logout();
@@ -72,6 +154,7 @@ export function Navbar() {
                     window.location.href = "/";
                   }
                 }}
+                aria-label="Sign out"
               >
                 <LogOut size={14} /> <span className="logout-text">Sign out</span>
               </button>
@@ -164,14 +247,16 @@ export function ProtectedRoute({ role }) {
     );
   if (!user)
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  if (user.role !== role)
-    return <Navigate to={`/${user.role.toLowerCase()}/dashboard`} replace />;
+  // Hosts have full access to guest features too; guests switch to HOST mode for host workspace
+  if (role === "HOST" && user.role !== "HOST")
+    return <Navigate to="/guest/dashboard" replace />;
   return <Outlet />;
 }
 export function DashboardLayout({ role }) {
   const [open, setOpen] = useState(false),
     [collapsed, setCollapsed] = useState(false);
-  const { user, refresh } = useStore();
+  const [switchingRole, setSwitchingRole] = useState(false);
+  const { user, refresh, switchRole } = useStore();
   const [logoutError, setLogoutError] = useState(""),
     [loggingOut, setLoggingOut] = useState(false);
   const navigate = useNavigate();
@@ -192,8 +277,29 @@ export function DashboardLayout({ role }) {
         [Sparkles, "AI Finder", "/ai-finder"],
         [User, "Profile", "/profile"],
       ];
+
+  const handleSwitchWorkspace = async () => {
+    if (switchingRole) return;
+    setSwitchingRole(true);
+    try {
+      const nextRole = host ? "GUEST" : "HOST";
+      await switchRole(nextRole);
+      setOpen(false);
+      navigate(nextRole === "HOST" ? "/host/dashboard" : "/guest/dashboard");
+    } finally {
+      setSwitchingRole(false);
+    }
+  };
+
   return (
     <div className={"workspace " + (collapsed ? "collapsed" : "")}>
+      {open && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <aside className={"sidebar " + (open ? "open" : "")}>
         <Brand />
         <button
@@ -206,6 +312,24 @@ export function DashboardLayout({ role }) {
         <span className="eyebrow">
           {host ? "HOST WORKSPACE" : "YOUR PERSONAL SPACE"}
         </span>
+
+        {/* 1-Account Dual-Role Mode Switcher in Sidebar */}
+        <div className="sidebar-mode-card">
+          <div className="sidebar-mode-status">
+            <span className="sidebar-mode-dot" />
+            <span>{host ? "Host Mode" : "Guest Mode"}</span>
+          </div>
+          <button
+            type="button"
+            className="sidebar-switch-btn"
+            disabled={switchingRole}
+            onClick={handleSwitchWorkspace}
+          >
+            <ArrowLeftRight size={13} />
+            <span>{switchingRole ? "Switching…" : `Switch to ${host ? "Guest Mode" : "Host Mode"}`}</span>
+          </button>
+        </div>
+
         <nav>
           {links.map(([Icon, title, path]) => (
             <NavLink onClick={() => setOpen(false)} key={path} to={base + path}>
@@ -255,11 +379,23 @@ export function DashboardLayout({ role }) {
           >
             <Menu />
           </button>
-          <span>{host ? "Property management" : "A little space for you"}</span>
-          <div>
+          <span className="workspace-title">{host ? "Property management" : "A little space for you"}</span>
+          <div className="workspace-header-actions">
+            <button
+              type="button"
+              className="header-switch-mode-btn"
+              disabled={switchingRole}
+              onClick={handleSwitchWorkspace}
+              title={`Switch account mode to ${host ? "Guest" : "Host"}`}
+            >
+              <ArrowLeftRight size={13} />
+              <span className="header-switch-text">
+                {switchingRole ? "…" : host ? "To Guest" : "To Host"}
+              </span>
+            </button>
             <span className="demo-label">DEMO PROPERTY DATA</span>
-            <Link to={base + "/profile"} className="avatar">
-              {user.name[0]}
+            <Link to={base + "/profile"} className="avatar" title={user.name}>
+              {user.name?.[0] || "U"}
             </Link>
           </div>
         </header>
