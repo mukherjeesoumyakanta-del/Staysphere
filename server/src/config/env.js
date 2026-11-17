@@ -67,5 +67,12 @@ export function getConfig(env = process.env) {
       env.AI_MODEL ||
       (env.AI_PROVIDER === "openai" ? "gpt-4o-mini" : "gemini-1.5-flash"),
     aiProvider: (env.AI_PROVIDER || "gemini").toLowerCase(),
+    // MongoDB Atlas Vector Search & Embedding configuration
+    embeddingProvider: (env.EMBEDDING_PROVIDER || env.AI_PROVIDER || "gemini").toLowerCase(),
+    embeddingApiKey: env.EMBEDDING_API_KEY || env.AI_API_KEY || "",
+    embeddingModel: env.EMBEDDING_MODEL || "text-embedding-004",
+    embeddingDimensions: Number(env.EMBEDDING_DIMENSIONS) || 768,
+    vectorIndexName: env.VECTOR_INDEX_NAME || "property_vector_index",
+    vectorSearchEnabled: env.VECTOR_SEARCH_ENABLED !== "false",
   });
 }

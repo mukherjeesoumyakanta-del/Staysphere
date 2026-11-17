@@ -12,7 +12,8 @@
     "test": "node --test",
     "check": "node --check src/server.js && node --check src/app.js",
     "check:db": "node scripts/check-database.js",
-    "seed": "node scripts/seed-listings.js"
+    "seed": "node scripts/seed-listings.js",
+    "embeddings:backfill": "node scripts/backfillEmbeddings.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

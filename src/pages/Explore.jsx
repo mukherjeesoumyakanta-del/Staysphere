@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, X, ArrowRight } from "lucide-react";
+import { Search, SlidersHorizontal, X, ArrowRight, Sparkles } from "lucide-react";
 import { listingApiService } from "../services/listingApiService";
 import { types, amenities } from "../data/properties";
 import { PropertyGrid, Button, Field } from "../components/UI";
@@ -97,18 +97,24 @@ export default function Explore() {
         </h1>
         <p>Thoughtfully chosen stays, across places you'll love.</p>
       </div>
-      <div className="explore-search">
-        <Search size={20} />
-        <input
-          aria-label="Search properties"
-          placeholder="Search a destination or a beautiful space…"
-          value={f.q}
-          onChange={(e) => change("q", e.target.value)}
-        />
-        <Button className="secondary" onClick={() => setDrawer(!drawer)}>
-          <SlidersHorizontal size={17} />
-          Filters
-        </Button>
+      <div className="explore-search-wrapper" style={{ marginBottom: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", fontSize: "12px", color: "#059669", fontWeight: 500 }}>
+          <Sparkles size={14} style={{ color: "#10b981" }} />
+          <span>AI-Powered Semantic Vector Search &bull; Describe your dream stay naturally</span>
+        </div>
+        <div className="explore-search">
+          <Search size={20} />
+          <input
+            aria-label="Search properties"
+            placeholder="Try: peaceful cottage in the mountains with scenic view..."
+            value={f.q}
+            onChange={(e) => change("q", e.target.value)}
+          />
+          <Button className="secondary" onClick={() => setDrawer(!drawer)}>
+            <SlidersHorizontal size={17} />
+            Filters
+          </Button>
+        </div>
       </div>
       <div className="explore-layout">
         <aside className={"filters " + (drawer ? "drawer-open" : "")}>

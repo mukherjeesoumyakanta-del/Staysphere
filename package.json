@@ -12,6 +12,7 @@
     "start:server": "npm --prefix server start",
     "test:client": "node --test src/services/*.test.js",
     "test:server": "npm --prefix server test",
+    "embeddings:backfill": "npm --prefix server run embeddings:backfill",
     "install:server": "npm --prefix server ci"
   },
   "dependencies": {

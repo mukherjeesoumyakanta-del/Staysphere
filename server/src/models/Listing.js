@@ -132,6 +132,28 @@ const listingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Semantic Vector Search fields
+    searchText: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    embedding: {
+      type: [Number],
+      select: false, // Never expose raw vector arrays in normal queries
+    },
+    embeddingModel: {
+      type: String,
+      default: "text-embedding-004",
+    },
+    embeddingUpdatedAt: {
+      type: Date,
+    },
+    embeddingStatus: {
+      type: String,
+      enum: ["PENDING", "COMPLETED", "FAILED"],
+      default: "PENDING",
+    },
   },
   { timestamps: true }
 );
@@ -145,5 +167,7 @@ listingSchema.index({ status: 1, createdAt: -1 });
 listingSchema.index({ status: 1, city: 1 });
 // 4. status + pricePerNight: Speeds up price range filtering and price sorting
 listingSchema.index({ status: 1, pricePerNight: 1 });
+// 5. embeddingStatus: Speeds up finding unindexed or failed listings for backfilling
+listingSchema.index({ embeddingStatus: 1 });
 
 export const Listing = mongoose.model("Listing", listingSchema);

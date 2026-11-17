@@ -2,6 +2,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { createAiClient } from "./aiProvider.js";
 import { listingRepository } from "../repositories/listingRepository.js";
 import { aiPrivacyService } from "./aiPrivacyService.js";
+import { createEmbeddingService } from "./embeddingService.js";
 
 const VALID_PROPERTY_TYPES = [
   "Apartment",
@@ -38,12 +39,17 @@ export function validateAiFilters(raw) {
 
 export function createAiService(
   config = {},
-  { aiClient = createAiClient(config), listingRepo = listingRepository } = {}
+  {
+    aiClient = createAiClient(config),
+    listingRepo = listingRepository,
+    embedService = createEmbeddingService(config),
+  } = {}
 ) {
   return {
     /**
      * Search listings using natural language prompt.
      * Sanitizes prompt through aiPrivacyService, extracts structured filters,
+     * performs semantic vector search or deterministic filter matching,
      * queries real ACTIVE listings from MongoDB, and tracks latency splits.
      */
     async searchListings(prompt) {
@@ -115,7 +121,19 @@ Return raw JSON only, no markdown, no quotes around json, no preamble.`;
         extracted = localFilters;
       }
 
-      // 3. Query real ACTIVE MongoDB listings with safe mapped filters
+      // 3. Generate query vector for semantic matching if vector search enabled
+      let queryVector = null;
+      if (config.vectorSearchEnabled !== false && cleanPrompt.length >= 3) {
+        try {
+          if (embedService.isConfigured() || config.nodeEnv === "test") {
+            queryVector = await embedService.generateEmbedding(cleanPrompt, "RETRIEVAL_QUERY");
+          }
+        } catch (err) {
+          console.warn("Failed to generate vector in AI finder, using keyword query:", err.message);
+        }
+      }
+
+      // 4. Query real ACTIVE MongoDB listings with safe mapped filters and optional query vector
       const queryParams = {
         city: extracted.city,
         maxPrice: extracted.maxPrice,
@@ -124,6 +142,8 @@ Return raw JSON only, no markdown, no quotes around json, no preamble.`;
         bedrooms: extracted.bedrooms,
         propertyType: extracted.propertyType,
         amenities: extracted.amenities,
+        queryVector,
+        vectorIndexName: config.vectorIndexName || "property_vector_index",
         limit: 20,
       };
 
@@ -156,6 +176,7 @@ Return raw JSON only, no markdown, no quotes around json, no preamble.`;
         listings,
         explanation,
         provider: usedProvider,
+        searchMode: searchResult?.searchMode || (queryVector ? "vector" : "standard"),
         configured: Boolean(aiClient && aiClient.isConfigured()),
         timings: {
           llmDurationMs,
