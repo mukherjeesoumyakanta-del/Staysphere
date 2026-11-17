@@ -28,7 +28,8 @@ import { useStore } from "../context/Store";
 import { authService } from "../services";
 export function Navbar() {
   const [open, setOpen] = useState(false);
-  const { user } = useStore();
+  const { user, switchRole } = useStore();
+  const navigate = useNavigate();
 
   return (
     <header className="navbar">
@@ -48,9 +49,27 @@ export function Navbar() {
         <div className="nav-actions">
           {user ? (
             <div className="nav-user-actions" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span className="tiny-tag nav-user-tag" style={{ textTransform: "capitalize", padding: "3px 8px" }}>
-                {user.role?.toLowerCase()} · {user.name?.split(" ")[0] || "User"}
-              </span>
+              <button
+                type="button"
+                className="host-link"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.4rem 0.6rem",
+                }}
+                onClick={async () => {
+                  const nextRole = user.role === "HOST" ? "GUEST" : "HOST";
+                  await switchRole(nextRole);
+                  navigate(nextRole === "HOST" ? "/host/dashboard" : "/guest/dashboard");
+                }}
+                title={`Click to switch to ${user.role === "HOST" ? "Guest" : "Host"} mode`}
+              >
+                Host / Guest <ArrowLeftRight size={14} />
+              </button>
               <Button
                 className="nav-signin"
                 to={`/${user.role.toLowerCase()}/dashboard`}
@@ -83,9 +102,9 @@ export function Navbar() {
             <>
               <Link
                 className="host-link"
-                to="/signup?role=HOST"
+                to="/signup"
               >
-                Become a host <ArrowUpRight size={15} />
+                Host / Guest <ArrowUpRight size={15} />
               </Link>
               <Button
                 className="nav-signin"
@@ -124,7 +143,7 @@ export function Footer() {
         </div>
         <div>
           <h4>Make yourself at home</h4>
-          <Link to="/signup?role=HOST">Become a host</Link>
+          <Link to="/signup">Host / Guest</Link>
           <Link to="/login">Your workspace</Link>
           <a href="mailto:hello@example.com">Contact · demo address</a>
         </div>

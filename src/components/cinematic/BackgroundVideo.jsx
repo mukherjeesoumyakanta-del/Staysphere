@@ -11,6 +11,10 @@ export default function BackgroundVideo({
     const el = ref.current;
     if (!el) return;
 
+    // Explicitly set muted on DOM property to satisfy Chrome's strict autoplay policy
+    el.muted = true;
+    el.defaultMuted = true;
+
     const media = matchMedia("(prefers-reduced-motion: reduce)");
     const limited = navigator.connection?.saveData;
 
