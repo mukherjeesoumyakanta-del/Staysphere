@@ -93,11 +93,13 @@ export function createBookingService(
         );
       }
 
+      // Server-side financial & duration calculation (prevents client price-tampering)
       const nights = getNightStrings(sIn, sOut);
       const totalNights = nights.length;
       const totalPrice = totalNights * listing.pricePerNight;
 
-      // Atomic creation with unique constraint
+      // Atomic reservation with unique BookingNight compound index:
+      // Guarantees zero double-booking even under concurrent race conditions.
       const result = await bookingRepo.createAtomic({
         listingId,
         guestId,

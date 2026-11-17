@@ -33,6 +33,12 @@ export const availabilityRepository = {
     return BlockedDate.findById(blockId).lean();
   },
 
+  /**
+   * Interval-Overlap Algorithm:
+   * Two half-open date intervals [A_start, A_end) and [B_start, B_end) overlap
+   * if and only if (A_start < B_end) AND (A_end > B_start).
+   * Backed by compound index: { listingId: 1, startDate: 1, endDate: 1 }.
+   */
   async findOverlapping(listingId, startDate, endDate) {
     return BlockedDate.findOne({
       listingId,

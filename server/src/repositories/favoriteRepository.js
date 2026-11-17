@@ -6,6 +6,7 @@ export const favoriteRepository = {
       .populate({
         path: "listingId",
         match: { status: "ACTIVE" },
+        select: "title city state location propertyType pricePerNight images maxGuests bedrooms bathrooms status hostId",
       })
       .sort({ createdAt: -1 })
       .lean();
