@@ -4029,24 +4029,6 @@ footer {
 .sidebar{animation:workspace-enter .35s ease-out}.stat-card{animation:stat-enter .5s ease-out both;transition:box-shadow .25s,transform .25s}.stat-card:nth-child(2){animation-delay:.06s}.stat-card:nth-child(3){animation-delay:.12s}.stat-card:nth-child(4){animation-delay:.18s}.stat-card:hover{transform:translateY(-3px);box-shadow:0 8px 20px #24391b0a}@keyframes workspace-enter{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}@keyframes stat-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.sidebar,.stat-card{animation:none}.stat-card:hover{transform:none}}
 
 /* Dual-Role Account Mode Switcher Styles */
-.role-switch-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 11px;
-  font-size: 11px;
-  font-weight: 600;
-  border-radius: 9999px;
-  border: 1px solid #c0ceb8;
-  background: #f0f4ea;
-  color: #243e1d;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.role-switch-pill:hover {
-  background: #e2ebd8;
-  border-color: #9cb091;
-}
 .role-badge {
   display: inline-block;
   padding: 3px 8px;
@@ -4228,74 +4210,6 @@ footer {
     overflow-y: auto;
     z-index: 99;
   }
-  .mobile-drawer-actions {
-    margin-top: auto;
-    padding-top: 18px;
-    border-top: 1px solid #dce4d5;
-    width: 100%;
-  }
-  .mobile-user-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: #edf2e7;
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid #d4dfcc;
-  }
-  .mobile-user-meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .mobile-user-name {
-    font-weight: 700;
-    font-size: 14px;
-    color: #1a2e15;
-  }
-  .mobile-role-switch-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 11px;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid #cbd6c2;
-    color: #1f351a;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  .mobile-user-nav-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-  }
-  .mobile-workspace-btn {
-    justify-content: center;
-    padding: 11px;
-    font-size: 13px;
-  }
-  .mobile-signout-btn {
-    padding: 11px 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .mobile-auth-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 100%;
-  }
-  .mobile-host-btn, .mobile-signin-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 13px;
-    font-size: 14px;
-  }
   .sidebar {
     position: fixed;
     top: 0;
@@ -4412,9 +4326,6 @@ footer {
   .nav-logout-btn .logout-text {
     display: none !important;
   }
-  .role-switch-text {
-    display: none !important;
-  }
   .header-switch-text {
     display: none !important;
   }
@@ -4424,7 +4335,7 @@ footer {
   .nav-actions {
     gap: 6px;
   }
-  .nav-signin, .nav-logout-btn, .role-switch-pill, .header-switch-mode-btn {
+  .nav-signin, .nav-logout-btn, .header-switch-mode-btn {
     padding: 6px 9px !important;
     font-size: 11px !important;
   }
