@@ -67,11 +67,11 @@ staysphere/
 │   ├── services/           # Centralized API fetch client & client-side adapters
 │   ├── App.jsx             # React Router configuration
 │   └── styles.css          # Core design system & responsive styling
-├── vercel.json             # Vercel SPA routing & proxy configuration
+├── vercel.json             # Vercel SPA routing & build configuration
 ├── render.yaml             # Render Blueprint web service configuration
-├── DEPLOYMENT.md           # Step-by-step production deployment guide
-├── ARCHITECTURE.md         # Deep-dive system design & data flow document
-├── PROJECT_STATUS.md       # Audit matrix & verified test results
+├── PROJECT_REVERSE_ENGINEERING.md # Complete reverse-engineering & viva interview guide
+├── VECTOR_SEARCH_EXPLAINED.md    # MongoDB Atlas Vector Search guide
+├── TEST_REPORT.md          # Automated test execution report
 └── package.json
 ```
 
@@ -177,9 +177,8 @@ npm run test:server
 
 ---
 
-## Production Deployment
+## Documentation & Technical Guides
 
-Detailed production deployment instructions for **Vercel** (Frontend) and **Render** (Backend) are available in [DEPLOYMENT.md](file:///d:/STAYSPHERE/Staysphere/DEPLOYMENT.md).
-
-Architecture details and system design patterns are documented in [ARCHITECTURE.md](file:///d:/STAYSPHERE/Staysphere/ARCHITECTURE.md).
-Current feature completion matrix is in [PROJECT_STATUS.md](file:///d:/STAYSPHERE/Staysphere/PROJECT_STATUS.md).
+- [PROJECT_REVERSE_ENGINEERING.md](file:///d:/STAYSPHERE/Staysphere/PROJECT_REVERSE_ENGINEERING.md) — Comprehensive technical reverse-engineering guide, folder structure, entry points, request flows, and B.Tech viva preparation.
+- [VECTOR_SEARCH_EXPLAINED.md](file:///d:/STAYSPHERE/Staysphere/VECTOR_SEARCH_EXPLAINED.md) — Deep dive into MongoDB Atlas Vector Search, 768-dim Gemini embeddings, and cosine similarity.
+- [TEST_REPORT.md](file:///d:/STAYSPHERE/Staysphere/TEST_REPORT.md) — Complete baseline test results (77 tests passed, 0 failures).

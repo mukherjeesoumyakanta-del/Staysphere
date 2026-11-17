@@ -32,3 +32,15 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIMENSIONS
+        value: 768
+      - key: VECTOR_INDEX_NAME
+        value: property_vector_index
+      - key: VECTOR_SEARCH_ENABLED
+        value: "true"
+      - key: EMBEDDING_API_KEY
+        sync: false
