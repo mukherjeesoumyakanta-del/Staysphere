@@ -37,6 +37,26 @@ export function createApp(
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+          imgSrc: [
+            "'self'",
+            "data:",
+            "blob:",
+            "https://images.unsplash.com",
+            "https://res.cloudinary.com",
+            "https://*.cloudinary.com",
+            "https://*.unsplash.com",
+          ],
+          mediaSrc: ["'self'", "blob:", "data:", "https:"],
+          connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+        },
+      },
     })
   );
   app.use(
@@ -81,7 +101,14 @@ export function createApp(
     res.json({ data: getPerformanceStats() });
   });
 
-  app.use("/uploads", express.static(uploadsDir));
+  app.use(
+    "/uploads",
+    express.static(uploadsDir),
+    (req, res) => {
+      // Ephemeral storage fallback for missing local uploads
+      res.redirect("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80");
+    }
+  );
   app.use("/api/auth", privateNoCache(), authRoutes(config, users));
   app.use("/api", listingRoutes(config, { users, listings }));
   app.use(

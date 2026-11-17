@@ -135,7 +135,18 @@ import { Link } from "react-router-dom";
 function LinkCard({ property: p }) {
   return (
     <Link to={"/property/" + p.id} className="demo-ai-result">
-      <img src={p.images[0]} alt={p.name} />
+      <img
+        src={
+          (typeof p.images?.[0] === "object" ? p.images[0]?.url : p.images?.[0]) ||
+          "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80"
+        }
+        alt={p.name}
+        onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src =
+            "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80";
+        }}
+      />
       <div>
         <span>{p.location}</span>
         <h3>{p.name}</h3>

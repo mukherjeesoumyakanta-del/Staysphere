@@ -101,6 +101,11 @@ export default function DestinationShowcase() {
             <img
               src={`https://images.unsplash.com/${img}?auto=format&fit=crop&w=1600&q=85`}
               alt={name + " landscape"}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src =
+                  "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1600&q=85";
+              }}
               loading="lazy"
             />
             <div className="destination-gradient" />

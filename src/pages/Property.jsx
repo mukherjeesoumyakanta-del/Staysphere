@@ -300,8 +300,13 @@ export default function Property() {
               aria-label={"Enlarge property image " + (i + 1)}
             >
               <img
-                src={img}
+                src={typeof img === "object" ? img?.url : img}
                 alt={(p.name || p.title || "Stay") + " — view " + (i + 1)}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src =
+                    "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80";
+                }}
                 style={
                   i === 0 ? { viewTransitionName: "property-" + p.id } : undefined
                 }
@@ -555,8 +560,13 @@ export default function Property() {
             <ChevronLeft />
           </button>
           <img
-            src={p.images[gallery]}
+            src={typeof p.images[gallery] === "object" ? p.images[gallery]?.url : p.images[gallery]}
             alt={p.name + " view " + (gallery + 1)}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src =
+                "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80";
+            }}
           />
           <button
             className="icon-button"

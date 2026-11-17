@@ -122,9 +122,14 @@ export function PropertyCard({ property: p }) {
         <img
           loading="lazy"
           src={
-            p.images?.[0] ||
+            (typeof p.images?.[0] === "object" ? p.images[0]?.url : p.images?.[0]) ||
             "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80"
           }
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src =
+              "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80";
+          }}
           style={
             shared ? { viewTransitionName: "property-" + p.id } : undefined
           }

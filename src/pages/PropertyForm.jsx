@@ -31,7 +31,15 @@ function validateFile(file) {
 function PreviewItem({ src, label, isNew, onRemove }) {
   return (
     <div>
-      <img src={src} alt={label} />
+      <img
+        src={src}
+        alt={label}
+        onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src =
+            "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80";
+        }}
+      />
       <button
         aria-label={label}
         className="icon-button"

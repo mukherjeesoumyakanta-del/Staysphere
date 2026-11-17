@@ -1,40 +1,52 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+
 export default function BackgroundVideo({
   className = "",
   poster = "/images/hero-poster.webp",
+  src = "/videos/architecture.mp4",
 }) {
-  const ref = useRef();
-  const [play, setPlay] = useState(false);
+  const ref = useRef(null);
+
   useEffect(() => {
     const el = ref.current;
+    if (!el) return;
+
     const media = matchMedia("(prefers-reduced-motion: reduce)");
     const limited = navigator.connection?.saveData;
-    let visible = false;
-    const update = () => {
-      if (visible && !document.hidden && !media.matches && !limited) {
-        setPlay(true);
+
+    const playVideo = () => {
+      if (!document.hidden && !media.matches && !limited) {
         el.play()?.catch(() => {});
-      } else el.pause();
+      } else {
+        el.pause();
+      }
     };
+
     const io = new IntersectionObserver(
       ([entry]) => {
-        visible = entry.isIntersecting;
-        update();
+        if (entry.isIntersecting) {
+          playVideo();
+        } else {
+          el.pause();
+        }
       },
-      { rootMargin: "100px" },
+      { rootMargin: "100px" }
     );
+
     io.observe(el);
-    media.addEventListener("change", update);
-    document.addEventListener("visibilitychange", update);
-    el.addEventListener("loadeddata", update);
+    media.addEventListener("change", playVideo);
+    document.addEventListener("visibilitychange", playVideo);
+
+    playVideo();
+
     return () => {
       io.disconnect();
       el.pause();
-      media.removeEventListener("change", update);
-      document.removeEventListener("visibilitychange", update);
-      el.removeEventListener("loadeddata", update);
+      media.removeEventListener("change", playVideo);
+      document.removeEventListener("visibilitychange", playVideo);
     };
   }, []);
+
   return (
     <video
       ref={ref}
@@ -43,10 +55,10 @@ export default function BackgroundVideo({
       autoPlay
       loop
       playsInline
-      preload="none"
-      src={play ? "/videos/architecture.mp4" : undefined}
+      preload="auto"
+      src={src}
       poster={poster}
       aria-hidden="true"
-    ></video>
+    />
   );
 }

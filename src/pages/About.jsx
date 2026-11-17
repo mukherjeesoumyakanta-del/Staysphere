@@ -22,6 +22,11 @@ export function About() {
         <img
           src={photo("photo-1600210492486-724fe5c67fb0", 1600)}
           alt="A welcoming sunlit living room"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src =
+              "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80";
+          }}
         />
       </section>
       <section className="section about-copy">
