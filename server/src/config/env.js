@@ -24,35 +24,39 @@ export function getConfig(env = process.env) {
     Number(portValue) > 65535
   )
     throw new Error("PORT must be an integer between 1 and 65535");
-  let clientUrlRaw = env.CLIENT_URL || env.RENDER_EXTERNAL_URL || env.CORS_ORIGIN || "";
-  if (nodeEnv === "production" && !clientUrlRaw.trim()) {
-    clientUrlRaw = "https://localhost";
-  }
-  const origins = (clientUrlRaw || "http://localhost:5173")
+  const clientUrlRaw = env.CLIENT_URL || env.RENDER_EXTERNAL_URL || env.CORS_ORIGIN || "";
+  const rawList = (clientUrlRaw || "")
     .split(",")
-    .map((v) => v.trim());
-  for (const origin of origins) {
-    let parsed;
+    .map((v) => v.trim().replace(/^['"]+|['"]+$/g, ""))
+    .filter(Boolean);
+
+  const origins = [];
+  for (const item of rawList) {
     try {
-      parsed = new URL(origin);
+      const withProto = /^https?:\/\//i.test(item)
+        ? item
+        : (item.includes("localhost") || item.includes("127.0.0.1") ? `http://${item}` : `https://${item}`);
+      const parsed = new URL(withProto);
+      if (!origins.includes(parsed.origin)) {
+        origins.push(parsed.origin);
+      }
     } catch {
-      throw new Error(
-        "CLIENT_URL must contain comma-separated HTTP(S) origins",
-      );
+      // Skip invalid entries safely without crashing the server boot
     }
-    if (
-      !["http:", "https:"].includes(parsed.protocol) ||
-      parsed.origin !== origin
-    )
-      throw new Error(
-        "CLIENT_URL must contain origins only, without paths or trailing slashes",
-      );
   }
-  if (
-    nodeEnv === "production" &&
-    origins.some((origin) => !origin.startsWith("https://"))
-  )
-    throw new Error("CLIENT_URL must use HTTPS in production");
+
+  // Automatically include Render's injected URL if present
+  if (env.RENDER_EXTERNAL_URL) {
+    try {
+      const rOrigin = new URL(env.RENDER_EXTERNAL_URL).origin;
+      if (!origins.includes(rOrigin)) origins.push(rOrigin);
+    } catch {}
+  }
+
+  // Default fallback origins if none configured
+  if (origins.length === 0) {
+    origins.push("http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5000");
+  }
   const jwtSecret = env.JWT_SECRET || "";
   if (jwtSecret && jwtSecret.trim().length < 32)
     throw new Error("JWT_SECRET must be at least 32 characters");
